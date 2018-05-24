@@ -156,6 +156,20 @@ class TestAlascca(unittest.TestCase):
 
     @patch('autoseq.pipeline.clinseq.data_available_for_clinseq_barcode')
     @patch('autoseq.pipeline.clinseq.find_fastqs')
+    def test_configure_alascca_report_generation_no_report(self, mock_find_fastqs, mock_data_available_for_clinseq_barcode):
+        mock_find_fastqs.return_value = ["test1.fq.gz", "test2.fq.gz"]
+        mock_data_available_for_clinseq_barcode.return_value = True
+        test_alascca_pipeline = AlasccaPipeline(self.sample_data_valid, self.ref_data, {"create_alascca_report": False},
+                                                "/tmp", "/nfs/LIQBIO/INBOX/exomes")
+        num_jobs_before_call = len(test_alascca_pipeline.graph.nodes())
+        test_alascca_pipeline.configure_alascca_report_generation(self.test_normal_capture,
+                                                                  self.test_tumor_capture,
+                                                                  "dummy.txt", "dummy.json")
+        num_jobs_after_call = len(test_alascca_pipeline.graph.nodes())
+        self.assertEquals(num_jobs_before_call + 1, num_jobs_after_call)
+
+    @patch('autoseq.pipeline.clinseq.data_available_for_clinseq_barcode')
+    @patch('autoseq.pipeline.clinseq.find_fastqs')
     def test_configure_alascca_specific_analysis(self, mock_find_fastqs, mock_data_available_for_clinseq_barcode):
         mock_find_fastqs.return_value = ["test1.fq.gz", "test2.fq.gz"]
         mock_data_available_for_clinseq_barcode.return_value = True

@@ -20,6 +20,7 @@ class AlasccaPipeline(ClinseqPipeline):
         self.referral_db_conf = referral_db_conf
         self.addresses = addresses
         self.default_job_params["vardict-min-num-reads"] = 6
+        self.default_job_params["create_alascca_report"] = True
 
         # Check to ensure that the sample data is valid for an ALASCCA analysis:
         self.validate_sample_data_for_alascca()
@@ -150,11 +151,16 @@ class AlasccaPipeline(ClinseqPipeline):
         Configure the generation of the ALASCCA report for this pipeline instance.
         """
 
-        metadata_json = self.configure_compile_metadata(normal_capture, tumor_capture)
+        # Always create genomic json
         genomic_json = self.configure_compile_genomic_json(
             normal_capture, tumor_capture, alascca_cna_output, alascca_cna_purity_call)
-        self.configure_write_alascca_report(normal_capture, tumor_capture,
-                                            metadata_json, genomic_json)
+
+        # Create metadata json and final pdf only if supposed to
+        create_alascca_report = self.get_job_param("create_alascca_report")
+        if create_alascca_report:
+            metadata_json = self.configure_compile_metadata(normal_capture, tumor_capture)
+            self.configure_write_alascca_report(normal_capture, tumor_capture,
+                                                metadata_json, genomic_json)
 
     def configure_alascca_specific_analysis(self):
         """
