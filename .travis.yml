@@ -17,6 +17,7 @@ before_install:
   - bash tests/setup-tests.sh
 
 install:
+  - pip install coveralls
   - pip install -r requirements.txt
   - pip install .
 
