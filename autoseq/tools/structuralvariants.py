@@ -1,4 +1,4 @@
-from pypedream.job import Job
+from pypedream.job import Job, required, optional, conditional
 
 
 class Svcaller(Job):
@@ -87,3 +87,35 @@ class Sveffect(Job):
             predict_cmd,
             deactivate_env_cmd,
         )
+
+
+class MantaSomaticSV(Job):
+    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output_dir=None ):
+        Job.__init__(self)
+        self.input_tumor = input_tumor
+        self.input_normal = input_normal
+        self.tumorid = tumorid
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output_dir = output_dir
+        
+    def command(self):
+        required("", self.input_tumor)
+        required("", self.input_normal)
+        required("", self.reference_sequence)
+
+        # configuration
+        configure_strelkasomatic = "configManta.py" + \
+                                    " --generateEvidenceBam " + \
+                                    " --outputContig " + \
+                                    conditional(self.exome, "--exome") + \
+                                    conditional(self.exome, "--callRegions "+ self.target_bed) + \
+                                    " --normalBam " + self.input_normal + \
+                                    " --tumorBam " + self.input_tumor + \
+                                    " --referenceFasta " +  self.reference_sequence + \
+                                    " --runDir " + self.output_dir
+
+        cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
+        return cmd
