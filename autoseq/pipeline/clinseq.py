@@ -7,7 +7,7 @@ from autoseq.tools.igv import MakeAllelicFractionTrack, MakeCNVkitTracks, MakeQD
 from autoseq.util.library import find_fastqs
 from autoseq.tools.picard import PicardCollectInsertSizeMetrics, PicardCollectOxoGMetrics, \
     PicardMergeSamFiles, PicardMarkDuplicates, PicardCollectHsMetrics, PicardCollectWgsMetrics
-from autoseq.tools.variantcalling import Freebayes, VEP, VcfAddSample, VarDictForPureCN, call_somatic_variants
+from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, call_somatic_variants
 from autoseq.tools.msi import MsiSensor, Msings
 from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateContestVCFs
 from autoseq.tools.qc import *
@@ -273,7 +273,7 @@ class ClinseqPipeline(PypedreamPipeline):
 
         :return: List of unique capture named tuples.
         """
-
+        
         return [capture for capture in self.capture_to_results.keys()
                 if capture.capture_kit_id != "WG"]
 
@@ -307,7 +307,7 @@ class ClinseqPipeline(PypedreamPipeline):
 
         :return: List of named tuples.
         """
-
+    
         non_wgs_unique_captures = self.get_mapped_captures_no_wgs()
         return filter(lambda unique_capture: unique_capture.sample_type != "N",
                       non_wgs_unique_captures)
@@ -339,7 +339,7 @@ class ClinseqPipeline(PypedreamPipeline):
         :param capture_kit_code: The two-letter capture kit code.
         :return: The capture-kit name.
         """
-
+        
         # FIXME: Move this information to a config JSON file.
         capture_kit_loopkup = {"CS": "clinseq_v3_targets",
                                "CZ": "clinseq_v4",
@@ -487,31 +487,27 @@ class ClinseqPipeline(PypedreamPipeline):
         targets = self.get_capture_name(normal_capture.capture_kit_id)
         capture_str = compose_lib_capture_str(normal_capture)
 
-        freebayes = Freebayes()
-        freebayes.input_bams = [bam]
-        freebayes.somatic_only = False
-        freebayes.params = None
-        freebayes.reference_sequence = self.refdata['reference_genome']
-        freebayes.target_bed = self.refdata['targets'][targets]['targets-bed-slopped20']
-        freebayes.threads = self.maxcores
-        freebayes.scratch = self.scratch
-        freebayes.output = "{}/variants/{}.freebayes-germline.vcf.gz".format(self.outdir, capture_str)
-        freebayes.jobname = "freebayes-germline-{}".format(capture_str)
-        self.add(freebayes)
+        haplotypecaller = HaplotypeCaller()
+        haplotypecaller.input_bam = bam
+        haplotypecaller.reference_sequence = self.refdata['reference_genome']
+        haplotypecaller.output = "{}/variants/{}.haplotypecaller-germline.vcf.gz".format(self.outdir, capture_str)
+        haplotypecaller.jobname = "gatk-haplotypecaller-germline-{}".format(capture_str)
+
+        self.add(haplotypecaller)
 
         vepped_vcf = None
         if self.vep_data_is_available():
-            vep_freebayes = VEP()
-            vep_freebayes.input_vcf = freebayes.output
-            vep_freebayes.threads = self.maxcores
-            vep_freebayes.reference_sequence = self.refdata['reference_genome']
-            vep_freebayes.vep_dir = self.refdata['vep_dir']
-            vep_freebayes.output_vcf = "{}/variants/{}.freebayes-germline.vep.vcf.gz".format(self.outdir, capture_str)
-            vep_freebayes.jobname = "vep-freebayes-germline-{}".format(capture_str)
-            self.add(vep_freebayes)
-            vepped_vcf = vep_freebayes.output_vcf
+            vep_haplotypecaller = VEP()
+            vep_haplotypecaller.input_vcf = haplotypecaller.output
+            vep_haplotypecaller.threads = self.maxcores
+            vep_haplotypecaller.reference_sequence = self.refdata['reference_genome']
+            vep_haplotypecaller.vep_dir = self.refdata['vep_dir']
+            vep_haplotypecaller.output_vcf = "{}/variants/{}.haplotypecaller-germline.vep.vcf.gz".format(self.outdir, capture_str)
+            vep_haplotypecaller.jobname = "vep-gatk-haplotypecaller-germline-{}".format(capture_str)
+            self.add(vep_haplotypecaller)
+            vepped_vcf = vep_haplotypecaller.output_vcf
 
-        self.set_germline_vcf(normal_capture, (freebayes.output, vepped_vcf))
+        self.set_germline_vcf(normal_capture, (haplotypecaller.output, vepped_vcf))
 
     def configure_panel_analysis_with_normal(self, normal_capture):
         """
@@ -738,7 +734,7 @@ class ClinseqPipeline(PypedreamPipeline):
             self, cancer_bam=cancer_bam, normal_bam=normal_bam,
             cancer_capture=cancer_capture, normal_capture=normal_capture,
             target_name=target_name,
-            outdir=self.outdir, callers=['vardict'],
+            outdir=self.outdir, callers=['vardict','strelka','manta'],
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
             min_num_reads=self.get_job_param('vardict-min-num-reads'))
 

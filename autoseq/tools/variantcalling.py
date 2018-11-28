@@ -6,45 +6,22 @@ from pypedream.job import Job, repeat, required, optional, conditional
 from autoseq.util.clinseq_barcode import *
 from autoseq.util.vcfutils import vt_split_and_leftaln, fix_ambiguous_cl, remove_dup_cl
 
-
-class Freebayes(Job):
+class HaplotypeCaller(Job):
     def __init__(self):
         Job.__init__(self)
-        self.input_bams = None
+        self.input_bam = None
         self.reference_sequence = None
-        self.target_bed = None
-        self.somatic_only = False
-        self.params = "--pooled-discrete --pooled-continuous --genotype-qualities --report-genotype-likelihood-max --allele-balance-priors-off"
-        self.min_coverage = 20
-        self.min_alt_frac = 0.01
-        self.use_harmonic_indel_quals = False
-        self.output = ""
-        self.jobname = "freebayes-somatic"
+        self.java_options = "--java-options -Xmx4g"
+        self.output = None
+        self.jobname = "gatk-haplotype-somatic"
 
     def command(self):
-        regions_file = "{scratch}/{uuid}.regions".format(scratch=self.scratch, uuid=uuid.uuid4())
-        bed_to_regions_cmd = "cat {} | bed_to_regions.py > {}".format(self.target_bed, regions_file)
+        haplotypecaller_cmd = "gatk {} HaplotypeCaller ".format(self.java_options) + \
+                        required("-R ", self.reference_sequence) + \
+                        required("-I ", self.input_bam) + \
+                        required("-O ", self.output) 
 
-        call_somatic_cmd = " | {} -c 'from autoseq.util.bcbio import call_somatic; import sys; print call_somatic(sys.stdin.read())' ".format(
-            sys.executable)
-
-        freebayes_cmd = "freebayes-parallel {} {} ".format(regions_file, self.threads) + \
-                        required("-f ", self.reference_sequence) + " --use-mapping-quality " + \
-                        optional("--min-alternate-fraction ", self.min_alt_frac) + \
-                        optional("--min-coverage ", self.min_coverage) + \
-                        conditional(self.use_harmonic_indel_quals, "--harmonic-indel-quality") + \
-                        optional("", self.params) + \
-                        repeat(" ", self.input_bams) + \
-                        """| bcftools filter -i 'ALT="<*>" || QUAL > 5' """ + \
-                        "| filter_erroneus_alt.py -V /dev/stdin " + \
-                        conditional(self.somatic_only, call_somatic_cmd) + \
-                        " | " + vt_split_and_leftaln(self.reference_sequence) + \
-                        " | vcfuniq | bcftools view --apply-filters .,PASS " + \
-                        " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output)
-        # reason for 'vcfuniq': freebayes sometimes report duplicate variants that need to be uniqified.
-        rm_regions_cmd = "rm {}".format(regions_file)
-        return " && ".join([bed_to_regions_cmd, freebayes_cmd, rm_regions_cmd])
-
+        return haplotypecaller_cmd
 
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -95,6 +72,58 @@ class VarDict(Job):
               " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output)
         return cmd
 
+class StrelkaSomatic(Job):
+    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output_dir=None ):
+        Job.__init__(self)
+        self.input_tumor = input_tumor
+        self.input_normal = input_normal
+        self.tumorid = tumorid
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output_dir = output_dir
+        
+    def command(self):
+        required("", self.input_tumor)
+        required("", self.input_normal)
+        required("", self.reference_sequence)
+
+        # configuration
+        configure_strelkasomatic = "strelka-2.9.9.centos6_x86_64/bin/configureStrelkaSomaticWorkflow.py" + \
+                                    "--normalBam " + self.input_normal + \
+                                    "--tumorBam " + self.input_tumor + \
+                                    "--ref " +  self.reference_sequence + \
+                                    "--runDir " + self.output_dir
+        cmd = configure_strelkasomatic + "&&" + self.output_dir+"/runWorkflow.py -m local -j 20"
+        return cmd
+
+class MantaSomaticSV(Job):
+    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output_dir=None ):
+        Job.__init__(self)
+        self.input_tumor = input_tumor
+        self.input_normal = input_normal
+        self.tumorid = tumorid
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output_dir = output_dir
+        
+    def command(self):
+        required("", self.input_tumor)
+        required("", self.input_normal)
+        required("", self.reference_sequence)
+
+        # configuration
+        configure_strelkasomatic = "manta-1.4.0.centos6_x86_64/bin/configManta.py" + \
+                                    "--normalBam " + self.input_normal + \
+                                    "--tumorBam " + self.input_tumor + \
+                                    "--ref " +  self.reference_sequence + \
+                                    "--runDir " + self.output_dir
+
+        cmd = configure_strelkasomatic + "&&" + self.output_dir+"/runWorkflow.py -m local -j 20"
+        return cmd
 
 class VarDictForPureCN(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -260,7 +289,7 @@ class InstallVep(Job):
 
 
 def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, normal_capture,
-                          target_name, outdir, callers=['vardict', 'freebayes'],
+                          target_name, outdir, callers=['vardict', 'strelka','manta'],
                           min_alt_frac=0.1, min_num_reads=None):
     """
     Configuring calling of somatic variants on a given pairing of cancer and normal bam files,
@@ -316,5 +345,27 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         vardict.jobname = "vardict/{}".format(cancer_capture_str)
         pipeline.add(vardict)
         d['vardict'] = vardict.output
+    
+    if 'manta' in callers:
+        manta_somatic = MantaSomaticSV(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
+                          normalid=normal_sample_str,
+                          reference_sequence=pipeline.refdata['reference_genome'],
+                          output_dir="{}/variants/{}-{}-manta-somatic".format(outdir, cancer_capture_str, normal_capture_str)
+                          )
+        manta_somatic.jobname = "manta-somatic-sv/{}".format(cancer_capture_str)
+        pipeline.add(manta_somatic)
+        #d['strelka'] = manta_somatic.output_dir+"/results/variants/somatic.snvs.vcf.gz"
+
+    if 'strelka' in callers:
+        strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
+                          normalid=normal_sample_str,
+                          reference_sequence=pipeline.refdata['reference_genome'],
+                          output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, cancer_capture_str, normal_capture_str)
+                          )
+        strelka_somatic.jobname = "strelka-somatic-workflow/{}".format(cancer_capture_str)
+        pipeline.add(strelka_somatic)
+        d['strelka'] = strelka_somatic.output_dir+"/results/variants/somatic.snvs.vcf.gz"
+
+    
 
     return d
