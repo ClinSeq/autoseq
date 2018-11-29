@@ -90,28 +90,28 @@ class Sveffect(Job):
 
 
 class MantaSomaticSV(Job):
-    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output_dir=None ):
+    def __init__(self):
         Job.__init__(self)
-        self.input_tumor = input_tumor
-        self.input_normal = input_normal
-        self.tumorid = tumorid
-        self.normalid = normalid
-        self.reference_sequence = reference_sequence
-        self.target_bed = target_bed
-        self.output_dir = output_dir
+        self.input_tumor = None
+        self.input_normal = None
+        self.tumorid = None
+        self.normalid = None
+        self.reference_sequence = None
+        self.target_bed = None
+        self.output_dir = None
+        self.jobname = "manta-somatic-sv"
         
     def command(self):
         required("", self.input_tumor)
         required("", self.input_normal)
         required("", self.reference_sequence)
 
-        # configuration
+        # configuration - exome param is added as default, Need to be removed if experiment is WGS.
         configure_strelkasomatic = "configManta.py" + \
                                     " --generateEvidenceBam " + \
                                     " --outputContig " + \
-                                    conditional(self.exome, "--exome") + \
-                                    conditional(self.exome, "--callRegions "+ self.target_bed) + \
+                                    " --exome" + \
+                                    " --callRegions "+ self.target_bed + \
                                     " --normalBam " + self.input_normal + \
                                     " --tumorBam " + self.input_tumor + \
                                     " --referenceFasta " +  self.reference_sequence + \

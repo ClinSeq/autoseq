@@ -1,7 +1,7 @@
 from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
-from autoseq.tools.structuralvariants import Svcaller, Sveffect
+from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV
 
 __author__ = 'thowhi'
 
@@ -91,6 +91,32 @@ class LiqBioPipeline(ClinseqPipeline):
             for cancer_capture in self.get_mapped_captures_cancer():
                 self.configure_panel_analysis_cancer_vs_normal_liqbio(
                     normal_capture, cancer_capture)
+    
+    def configure_manta(self, normal_capture, cancer_capture):
+        """
+        Configure manta, to identify structural variants in sample
+
+        :param normal_capture: A unique normal sample library capture
+        :param cancer_capture: A unique cancer sample library capture
+        """
+        cancer_bam = self.get_capture_bam(cancer_capture)
+        normal_bam = self.get_capture_bam(normal_capture)
+        target_name = self.get_capture_name(cancer_capture.capture_kit_id)
+
+        cancer_capture_str = compose_lib_capture_str(cancer_capture)
+        normal_capture_str = compose_lib_capture_str(normal_capture)
+
+        manta_sv = MantaSomaticSV()
+        manta_sv.input_tumor = cancer_bam
+        manta_sv.input_normal = normal_bam
+        manta_sv.tumorid = cancer_capture_str
+        manta_sv.normalid = normal_capture_str
+        manta_sv.reference_sequence = self.refdata["reference_genome"]
+        manta_sv.target_bed = self.refdata['targets'][target_name]
+        manta_sv.output_dir="{}/variants/{}-{}-manta-somatic".format(outdir, cancer_capture_str, normal_capture_str)
+
+        self.add(manta_sv)
+
 
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
         tumor_vs_normal_results = self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)]
@@ -130,6 +156,8 @@ class LiqBioPipeline(ClinseqPipeline):
 
     def configure_panel_analysis_cancer_vs_normal_liqbio(self, normal_capture, cancer_capture):
         capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
+
+        self.configure_manta(normal_capture, cancer_capture)
 
         if self.refdata['targets'][capture_name]['purecn_targets']:
             self.configure_purecn(normal_capture, cancer_capture)
