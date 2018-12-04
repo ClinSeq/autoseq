@@ -111,11 +111,11 @@ class MantaSomaticSV(Job):
                                     " --generateEvidenceBam " + \
                                     " --outputContig " + \
                                     " --exome" + \
-                                    " --callRegions "+ self.target_bed + \
-                                    " --normalBam " + self.input_normal + \
-                                    " --tumorBam " + self.input_tumor + \
-                                    " --referenceFasta " +  self.reference_sequence + \
-                                    " --runDir " + self.output_dir
+                                    " --callRegions {}" + \
+                                    " --normalBam {}" + \
+                                    " --tumorBam {}" + \
+                                    " --referenceFasta {}" + \
+                                    " --runDir {}".format(self.target_bed, self.input_normal, self.input_tumor, self.reference_sequence, self.output_dir) 
 
         cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd

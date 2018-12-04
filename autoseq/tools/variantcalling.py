@@ -90,12 +90,12 @@ class StrelkaSomatic(Job):
         required("", self.reference_sequence)
 
         # configuration
-        configure_strelkasomatic = "strelka-2.9.9.centos6_x86_64/bin/configureStrelkaSomaticWorkflow.py" + \
-                                    "--normalBam " + self.input_normal + \
-                                    "--tumorBam " + self.input_tumor + \
-                                    "--ref " +  self.reference_sequence + \
-                                    "--runDir " + self.output_dir
-        cmd = configure_strelkasomatic + "&&" + self.output_dir+"/runWorkflow.py -m local -j 20"
+        configure_strelkasomatic = "configureStrelkaSomaticWorkflow.py " + \
+                                    " --normalBam " + self.input_normal + \
+                                    " --tumorBam " + self.input_tumor + \
+                                    " --ref " +  self.reference_sequence + \
+                                    " --runDir " + self.output_dir
+        cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd
 
 class VarDictForPureCN(Job):
