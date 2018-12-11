@@ -23,6 +23,7 @@ class HaplotypeCaller(Job):
 
         return haplotypecaller_cmd
 
+
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None,
@@ -98,6 +99,60 @@ class StrelkaSomatic(Job):
         cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd
 
+class StrelkaGermline(Job):
+    def __init__(self, input_bam=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output_dir=None ):
+        Job.__init__(self)
+        self.input_bam = input_bam
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output_dir = output_dir
+        
+    def command(self):
+        required("", self.input_bam)
+        required("", self.reference_sequence)
+
+        # configuration
+        configure_strelkagermline = "configureStrelkaGermlineWorkflow.py " + \
+                                    " --bam " + self.input_bam + \
+                                    " --ref " +  self.reference_sequence + \
+                                    " --runDir " + self.output_dir
+        cmd = configure_strelkagermline + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
+        return cmd
+
+class Mutect2Somatic(Job):
+    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output=None, bamout=None ):
+        Job.__init__(self)
+        self.input_tumor = input_tumor
+        self.input_normal = input_normal
+        self.tumorid = tumorid
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output = output
+        self.bamout = bamout
+        
+    def command(self):
+        required("", self.input_tumor)
+        required("", self.input_normal)
+        required("", self.reference_sequence)
+
+        # configuration
+        mutectsomatic_cmd = " gatk --java-options '-Xmx2g' Mutect2 " + \
+                                    "-R " +  self.reference_sequence + \
+                                    "-I " + self.input_tumor + \
+                                    "-I " + self.input_normal + \
+                                    "-tumor " + self.tumorid + \
+                                    "-normal " + self.normalid + \
+                                    "--af-of-alleles-not-in-resource 0.0000025 " + \
+                                    "--disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
+                                    # "-L " + \ We can update Interval List Once confirmed with Rebecka
+                                    "-bamout " + self.bamout + \
+                                    "-O " + self.output
+        return mutectsomatic_cmd
+
 class VarDictForPureCN(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None, dbsnp=None):
@@ -171,7 +226,7 @@ class VEP(Job):
                  self.additional_options + required("--dir ", self.vep_dir) + \
                  required("--fasta ", self.reference_sequence) + \
                  required("-i ", self.input_vcf) + \
-                 " --check_alleles --check_existing  --total_length --allele_number " + \
+                 " --check_existing  --total_length --allele_number " + \
                  " --no_escape --no_stats --everything --offline " + \
                  fork + bgzip + " > " + required("", self.output_vcf) + \
                  " && tabix -p vcf {}".format(self.output_vcf)
@@ -330,6 +385,15 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         pipeline.add(strelka_somatic)
         d['strelka'] = strelka_somatic.output_dir+"/results/variants/somatic.snvs.vcf.gz"
 
-    
+    if 'mutect2' in callers:
+        mutect_somatic = Mutect2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
+                          normalid=normal_sample_str,
+                          reference_sequence=pipeline.refdata['reference_genome'],
+                          output="{}/variants/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
+                          bamout="{}/bams/{}-{}-mutect.bam".format(outdir, cancer_capture_str, normal_capture_str)
+                          )
+        mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
+        pipeline.add(mutect_somatic)
+        d['mutect'] = mutect_somatic.output
 
     return d

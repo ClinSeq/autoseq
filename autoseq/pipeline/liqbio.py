@@ -52,34 +52,34 @@ class LiqBioPipeline(ClinseqPipeline):
         sample_str = compose_lib_capture_str(unique_capture)
 
         # Configure svcaller analysis for each event type:
-        for event_type in ["DEL", "DUP", "INV", "TRA"]:
-            svcaller = Svcaller()
-            svcaller.input_bam = input_bam
-            svcaller.event_type = event_type
-            svcaller.output_bam = "{}/svs/{}-{}.bam".format(self.outdir, sample_str, event_type)
-            svcaller.output_gtf = "{}/svs/{}-{}.gtf".format(self.outdir, sample_str, event_type)
-            svcaller.reference_sequence = self.refdata["reference_genome"]
-            svcaller.scratch = self.scratch
-            self.add(svcaller)
+        # for event_type in ["DEL", "DUP", "INV", "TRA"]:
+        #     svcaller = Svcaller()
+        #     svcaller.input_bam = input_bam
+        #     svcaller.event_type = event_type
+        #     svcaller.output_bam = "{}/svs/{}-{}.bam".format(self.outdir, sample_str, event_type)
+        #     svcaller.output_gtf = "{}/svs/{}-{}.gtf".format(self.outdir, sample_str, event_type)
+        #     svcaller.reference_sequence = self.refdata["reference_genome"]
+        #     svcaller.scratch = self.scratch
+        #     self.add(svcaller)
 
-            self.set_capture_svs(unique_capture, event_type, (svcaller.output_bam, svcaller.output_gtf))
+        #     self.set_capture_svs(unique_capture, event_type, (svcaller.output_bam, svcaller.output_gtf))
 
-        # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
-        # getting "pushed too far" in it's usage:
-        sveffect = Sveffect()
-        sveffect.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
-        sveffect.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
-        sveffect.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
-        sveffect.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
-        sveffect.ts_regions = self.refdata["ts_regions"]
-        sveffect.ar_regions = self.refdata["ar_regions"]
-        sveffect.fusion_regions = self.refdata["fusion_regions"]
-        sveffect.output_combined_bed = "{}/svs/{}_combined.bed".format(self.outdir, sample_str)
-        sveffect.output_effects_json = "{}/svs/{}_effects.json".format(self.outdir, sample_str)
+        # # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
+        # # getting "pushed too far" in it's usage:
+        # sveffect = Sveffect()
+        # sveffect.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
+        # sveffect.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
+        # sveffect.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
+        # sveffect.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
+        # sveffect.ts_regions = self.refdata["ts_regions"]
+        # sveffect.ar_regions = self.refdata["ar_regions"]
+        # sveffect.fusion_regions = self.refdata["fusion_regions"]
+        # sveffect.output_combined_bed = "{}/svs/{}_combined.bed".format(self.outdir, sample_str)
+        # sveffect.output_effects_json = "{}/svs/{}_effects.json".format(self.outdir, sample_str)
 
-        self.add(sveffect)
+        # self.add(sveffect)
 
-        self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
+        # self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
 
     def configure_panel_analyses_liqbio(self):
         # Configure liqbio analyses to be run on all unique panel captures individually:
@@ -112,7 +112,7 @@ class LiqBioPipeline(ClinseqPipeline):
         manta_sv.tumorid = cancer_capture_str
         manta_sv.normalid = normal_capture_str
         manta_sv.reference_sequence = self.refdata["reference_genome"]
-        manta_sv.target_bed = self.refdata['targets'][target_name]
+        manta_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
         manta_sv.output_dir = "{}/variants/{}-{}-manta-somatic".format(self.outdir, cancer_capture_str, normal_capture_str)
 
         self.add(manta_sv)

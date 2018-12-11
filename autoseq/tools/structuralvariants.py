@@ -107,15 +107,21 @@ class MantaSomaticSV(Job):
         required("", self.reference_sequence)
 
         # configuration - exome param is added as default, Need to be removed if experiment is WGS.
-        configure_strelkasomatic = "configManta.py" + \
-                                    " --generateEvidenceBam " + \
-                                    " --outputContig " + \
-                                    " --exome" + \
-                                    " --callRegions {}" + \
-                                    " --normalBam {}" + \
-                                    " --tumorBam {}" + \
-                                    " --referenceFasta {}" + \
-                                    " --runDir {}".format(self.target_bed, self.input_normal, self.input_tumor, self.reference_sequence, self.output_dir) 
+        configure_mantasv = ("configManta.py " + 
+                                    "--generateEvidenceBam " + 
+                                    "--outputContig " + 
+                                    "--exome " + 
+                                    "--callRegions {target_bed} " + 
+                                    "--normalBam {input_normal} " + 
+                                    "--tumorBam {input_tumor} " + 
+                                    "--referenceFasta {reference_sequence} " + 
+                                    "--runDir {output_dir} ").format(
+                                          target_bed=self.target_bed, 
+                                          input_normal=self.input_normal, 
+                                          input_tumor=self.input_tumor, 
+                                          reference_sequence=self.reference_sequence, 
+                                          output_dir=self.output_dir
+                                      ) 
 
-        cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
+        cmd = configure_mantasv + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd

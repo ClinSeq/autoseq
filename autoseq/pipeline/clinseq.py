@@ -509,6 +509,13 @@ class ClinseqPipeline(PypedreamPipeline):
 
         self.set_germline_vcf(normal_capture, (haplotypecaller.output, vepped_vcf))
 
+        strelka_germline = StrelkaGermline(input_bam=bam,
+                          normalid=capture_str,
+                          reference_sequence=pipeline.refdata['reference_genome'],
+                          output_dir="{}/variants/{}-{}-strelka-germline".format(self.outdir, capture_str)
+                          )
+        strelka_germline.jobname = "strelka-germline-workflow/{}".format(capture_str)
+
     def configure_panel_analysis_with_normal(self, normal_capture):
         """
         Configure panel analyses focused on a specific unique normal library capture.
@@ -734,7 +741,7 @@ class ClinseqPipeline(PypedreamPipeline):
             self, cancer_bam=cancer_bam, normal_bam=normal_bam,
             cancer_capture=cancer_capture, normal_capture=normal_capture,
             target_name=target_name,
-            outdir=self.outdir, callers=['vardict','strelka','manta'],
+            outdir=self.outdir, callers=['vardict','strelka','manta','mutect2'],
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
             min_num_reads=self.get_job_param('vardict-min-num-reads'))
 
@@ -1070,7 +1077,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.configure_vcf_add_sample(normal_capture, cancer_capture)
         self.configure_make_allelic_fraction_track(normal_capture, cancer_capture)
         self.configure_msi_sensor(normal_capture, cancer_capture)
-        self.configure_hz_conc(normal_capture, cancer_capture)
+        #self.configure_hz_conc(normal_capture, cancer_capture)
         self.configure_contamination_estimate(normal_capture, cancer_capture)
 
     def configure_all_lowpass_qcs(self):
