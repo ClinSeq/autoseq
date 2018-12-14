@@ -7,7 +7,7 @@ from autoseq.tools.igv import MakeAllelicFractionTrack, MakeCNVkitTracks, MakeQD
 from autoseq.util.library import find_fastqs
 from autoseq.tools.picard import PicardCollectInsertSizeMetrics, PicardCollectOxoGMetrics, \
     PicardMergeSamFiles, PicardMarkDuplicates, PicardCollectHsMetrics, PicardCollectWgsMetrics
-from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, call_somatic_variants
+from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, call_somatic_variants, StrelkaGermline
 from autoseq.tools.msi import MsiSensor, Msings
 from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateContestVCFs
 from autoseq.tools.qc import *
@@ -511,10 +511,12 @@ class ClinseqPipeline(PypedreamPipeline):
 
         strelka_germline = StrelkaGermline(input_bam=bam,
                           normalid=capture_str,
-                          reference_sequence=pipeline.refdata['reference_genome'],
-                          output_dir="{}/variants/{}-{}-strelka-germline".format(self.outdir, capture_str)
+                          reference_sequence=self.refdata['reference_genome'],
+                          output_dir="{}/variants/{}-strelka-germline".format(self.outdir, capture_str)
                           )
         strelka_germline.jobname = "strelka-germline-workflow/{}".format(capture_str)
+
+        self.add(strelka_germline)
 
     def configure_panel_analysis_with_normal(self, normal_capture):
         """

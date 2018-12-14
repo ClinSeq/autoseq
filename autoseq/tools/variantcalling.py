@@ -17,9 +17,9 @@ class HaplotypeCaller(Job):
 
     def command(self):
         haplotypecaller_cmd = "gatk {} HaplotypeCaller ".format(self.java_options) + \
-                        required("-R ", self.reference_sequence) + \
-                        required("-I ", self.input_bam) + \
-                        required("-O ", self.output) 
+                        required(" -R ", self.reference_sequence) + \
+                        required(" -I ", self.input_bam) + \
+                        required(" -O ", self.output) 
 
         return haplotypecaller_cmd
 
@@ -140,17 +140,18 @@ class Mutect2Somatic(Job):
         required("", self.reference_sequence)
 
         # configuration
+        # "-L " + \ We can update Interval List Once confirmed with Rebecka
         mutectsomatic_cmd = " gatk --java-options '-Xmx2g' Mutect2 " + \
-                                    "-R " +  self.reference_sequence + \
-                                    "-I " + self.input_tumor + \
-                                    "-I " + self.input_normal + \
-                                    "-tumor " + self.tumorid + \
-                                    "-normal " + self.normalid + \
-                                    "--af-of-alleles-not-in-resource 0.0000025 " + \
-                                    "--disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
-                                    # "-L " + \ We can update Interval List Once confirmed with Rebecka
-                                    "-bamout " + self.bamout + \
-                                    "-O " + self.output
+                                    " -R " +  self.reference_sequence + \
+                                    " -I " + self.input_tumor + \
+                                    " -I " + self.input_normal + \
+                                    " -tumor " + self.tumorid + \
+                                    " -normal " + self.normalid + \
+                                    " --af-of-alleles-not-in-resource 0.0000025 " + \
+                                    " --disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
+                                    " -bamout " + self.bamout + \
+                                    " -O " + self.output
+
         return mutectsomatic_cmd
 
 class VarDictForPureCN(Job):
