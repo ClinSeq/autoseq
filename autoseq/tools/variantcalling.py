@@ -154,6 +154,34 @@ class Mutect2Somatic(Job):
 
         return mutectsomatic_cmd
 
+
+class Varscan2Somatic(Job):
+    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output=None, bamout=None ):
+        Job.__init__(self)
+        self.input_tumor = input_tumor
+        self.input_normal = input_normal
+        self.tumorid = tumorid
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output = output
+        
+    def command(self):
+        required("", self.input_tumor)
+        required("", self.input_normal)
+        required("", self.reference_sequence)
+
+        # configuration
+        # "-L " + \ We can update Interval List Once confirmed with Rebecka
+        normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.output + "/" + self.normalid +".pileup "
+        tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.output + "/" +  self.tumorid +".pileup "
+
+        varscan_cmd = "java -jar VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " + self.output + "/varscan-somatic"
+
+        return normal_mpileup_cmd + " && " + tumor_mpileup_cmd + " && " + varscan_cmd
+
+
 class VarDictForPureCN(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None, dbsnp=None):
