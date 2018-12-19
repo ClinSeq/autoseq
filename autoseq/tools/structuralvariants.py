@@ -13,7 +13,8 @@ class Svcaller(Job):
         self.jobname = "svcaller-run-all"
 
     def command(self):
-        activate_env_cmd = "source activate svcallerenv"
+        # activate_env_cmd = "source activate svcallerenv"
+        activate_env_cmd = "source /home/clinseq/svcallerenv/bin/activate "
 
         run_all_cmd = ("svcaller run-all --tmp-dir {scratch} " +
                       "--event-type {event_type} " +
@@ -28,7 +29,8 @@ class Svcaller(Job):
                           input_bam=self.input_bam,
                       )
 
-        deactivate_env_cmd = "source deactivate"
+        #deactivate_env_cmd = "source deactivate"
+        deactivate_env_cmd = "deactivate"
 
         return "{} && {} && {}".format(
             activate_env_cmd,
@@ -52,8 +54,8 @@ class Sveffect(Job):
         self.jobname = "sveffect"
 
     def command(self):
-        activate_env_cmd = "source activate svcallerenv"
-
+        # activate_env_cmd = "source activate svcallerenv"
+        activate_env_cmd = "source /home/clinseq/svcallerenv/bin/activate "
         make_bed_cmd = ("sveffect make-bed " +
                        "--del-gtf {del_gtf} " +
                        "--dup-gtf {dup_gtf} " +
@@ -79,7 +81,8 @@ class Sveffect(Job):
                           combined_effects_bed=self.output_combined_bed,
                       )
 
-        deactivate_env_cmd = "source deactivate"
+        #deactivate_env_cmd = "source deactivate"
+        deactivate_env_cmd = "deactivate"
 
         return "{} && {} && {} && {}".format(
             activate_env_cmd,

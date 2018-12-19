@@ -52,17 +52,17 @@ class LiqBioPipeline(ClinseqPipeline):
         sample_str = compose_lib_capture_str(unique_capture)
 
         # Configure svcaller analysis for each event type:
-        # for event_type in ["DEL", "DUP", "INV", "TRA"]:
-        #     svcaller = Svcaller()
-        #     svcaller.input_bam = input_bam
-        #     svcaller.event_type = event_type
-        #     svcaller.output_bam = "{}/svs/{}-{}.bam".format(self.outdir, sample_str, event_type)
-        #     svcaller.output_gtf = "{}/svs/{}-{}.gtf".format(self.outdir, sample_str, event_type)
-        #     svcaller.reference_sequence = self.refdata["reference_genome"]
-        #     svcaller.scratch = self.scratch
-        #     self.add(svcaller)
+        for event_type in ["DEL", "DUP", "INV", "TRA"]:
+            svcaller = Svcaller()
+            svcaller.input_bam = input_bam
+            svcaller.event_type = event_type
+            svcaller.output_bam = "{}/svs/{}-{}.bam".format(self.outdir, sample_str, event_type)
+            svcaller.output_gtf = "{}/svs/{}-{}.gtf".format(self.outdir, sample_str, event_type)
+            svcaller.reference_sequence = self.refdata["reference_genome"]
+            svcaller.scratch = self.scratch
+            self.add(svcaller)
 
-        #     self.set_capture_svs(unique_capture, event_type, (svcaller.output_bam, svcaller.output_gtf))
+            self.set_capture_svs(unique_capture, event_type, (svcaller.output_bam, svcaller.output_gtf))
 
         # # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
         # # getting "pushed too far" in it's usage:

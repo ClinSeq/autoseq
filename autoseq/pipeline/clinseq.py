@@ -479,6 +479,7 @@ class ClinseqPipeline(PypedreamPipeline):
         """
         Configure calling of germline variants for a normal sample library capture,
         and configure VEP if specified in the analysis.
+        Haplotypecaller and Strelka germline variant callers added in latest version
 
         :param normal_capture: The normal sample library capture identifier.
         :param bam: Bam filename input to variant calling.
@@ -517,6 +518,20 @@ class ClinseqPipeline(PypedreamPipeline):
         strelka_germline.jobname = "strelka-germline-workflow/{}".format(capture_str)
 
         self.add(strelka_germline)
+
+        
+        # if self.vep_data_is_available():
+        #     vep_strelka_germline = VEP()
+        #     vep_strelka_germline.input_vcf = strelka_germline.output_dir+"/results/variants/variants.vcf.gz"
+        #     vep_strelka_germline.threads = self.maxcores
+        #     vep_strelka_germline.reference_sequence = self.refdata['reference_genome']
+        #     vep_strelka_germline.vep_dir = self.refdata['vep_dir']
+        #     vep_strelka_germline.output_vcf = "{}/variants/{}.strelka-germline.vep.vcf.gz".format(self.outdir, capture_str)
+        #     vep_strelka_germline.jobname = "vep-strelka-germline-{}".format(capture_str)
+        #     self.add(vep_strelka_germline)
+        #     vepped_vcf = vep_strelka_germline.output_vcf
+
+        # self.set_germline_vcf(normal_capture, (strelka_germline.output_dir+"/results/variants/variants.vcf.gz", vepped_vcf))
 
     def configure_panel_analysis_with_normal(self, normal_capture):
         """

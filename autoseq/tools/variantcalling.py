@@ -177,7 +177,8 @@ class Varscan2Somatic(Job):
         normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.output + "/" + self.normalid +".pileup "
         tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.output + "/" +  self.tumorid +".pileup "
 
-        varscan_cmd = "java -jar VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " + self.output + "/varscan-somatic"
+        varscan_cmd = "java -jar VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " +  \
+                      self.output + "/"+ normalid + "-" + tumorid + "-varscan-somatic --output-vcf" 
 
         return normal_mpileup_cmd + " && " + tumor_mpileup_cmd + " && " + varscan_cmd
 
