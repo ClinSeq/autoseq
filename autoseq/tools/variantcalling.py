@@ -123,7 +123,7 @@ class StrelkaGermline(Job):
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output=None, bamout=None ):
+                 target_bed=None, output=None, bamout=None, exac=None, tumor_getpileupsummaries_table=None, tumor_calculatecontamination_table=None, output_filtered=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -133,7 +133,11 @@ class Mutect2Somatic(Job):
         self.target_bed = target_bed
         self.output = output
         self.bamout = bamout
-        
+        self.exac_genome_vcf = exac
+        self.tumor_getpileupsummaries_table = tumor_getpileupsummaries_table
+        self.tumor_calculatecontamination_table = tumor_calculatecontamination_table
+        self.output_filtered = output_filtered
+
     def command(self):
         required("", self.input_tumor)
         required("", self.input_normal)
@@ -141,6 +145,7 @@ class Mutect2Somatic(Job):
 
         # configuration
         # "-L " + \ We can update Interval List Once confirmed with Rebecka
+        # Call somatic short variants and generate a bamout with Mutect2
         mutectsomatic_cmd = " gatk --java-options '-Xmx2g' Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
@@ -151,8 +156,26 @@ class Mutect2Somatic(Job):
                                     " --disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
                                     " -bamout " + self.bamout + \
                                     " -O " + self.output
+        
+        # Estimate cross-sample contamination using GetPileupSummaries and CalculateContamination.
+        # Run GetPileupSummaries on the tumor BAM to summarize read support for a set number of known variant sites.
+        mutect_getpileup_sum = "gatk GetPileupSummaries " + \
+                                  "-I " + self.input_tumor + \
+                                  "-V " + self.exac_genome_vcf + \
+                                  "-O " + self.tumor_getpileupsummaries_table
 
-        return mutectsomatic_cmd
+        # Estimate contamination with CalculateContamination.
+        mutect_cal_contamination = "gatk CalculateContamination " + \
+                                      "-I " + self.tumor_getpileupsummaries_table + \
+                                      "-O " + self.tumor_calculatecontamination_table 
+
+        # Filter for confident somatic calls using FilterMutectCalls 
+        filter_mutect_calls = "gatk FilterMutectCalls " + \
+                                "-V " + self.output + \
+                                "--contamination-table " + self.tumor_calculatecontamination_table + \
+                                "-O "  + self.output_filtered
+
+        return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls])
 
 
 class Varscan2Somatic(Job):
@@ -420,7 +443,11 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           normalid=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
                           output="{}/variants/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
-                          bamout="{}/bams/{}-{}-mutect.bam".format(outdir, cancer_capture_str, normal_capture_str)
+                          bamout="{}/bams/{}-{}-mutect.bam".format(outdir, cancer_capture_str, normal_capture_str),
+                          exac=pipeline.refdata['exac'],
+                          tumor_getpileupsummaries_table= "{}/variants/{}-mutect-tumor-pileupsummary-table".format(outdir, cancer_capture_str),
+                          tumor_calculatecontamination_table= "{}/variants/{}-mutect-tumor-contamination-table".format(outdir, cancer_capture_str),
+                          output_filtered="{}/variants/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str)
                           )
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
         pipeline.add(mutect_somatic)
