@@ -146,7 +146,7 @@ class Mutect2Somatic(Job):
         # configuration
         # "-L " + \ We can update Interval List Once confirmed with Rebecka
         # Call somatic short variants and generate a bamout with Mutect2
-        mutectsomatic_cmd = " gatk --java-options '-Xmx2g' Mutect2 " + \
+        mutectsomatic_cmd = "gatk --java-options '-Xmx2g' Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
                                     " -I " + self.input_normal + \
@@ -160,27 +160,27 @@ class Mutect2Somatic(Job):
         # Estimate cross-sample contamination using GetPileupSummaries and CalculateContamination.
         # Run GetPileupSummaries on the tumor BAM to summarize read support for a set number of known variant sites.
         mutect_getpileup_sum = "gatk GetPileupSummaries " + \
-                                  "-I " + self.input_tumor + \
-                                  "-V " + self.exac_genome_vcf + \
-                                  "-O " + self.tumor_getpileupsummaries_table
+                                  " -I " + self.input_tumor + \
+                                  " -V " + self.exac_genome_vcf + \
+                                  " -O " + self.tumor_getpileupsummaries_table
 
         # Estimate contamination with CalculateContamination.
         mutect_cal_contamination = "gatk CalculateContamination " + \
-                                      "-I " + self.tumor_getpileupsummaries_table + \
-                                      "-O " + self.tumor_calculatecontamination_table 
+                                      " -I " + self.tumor_getpileupsummaries_table + \
+                                      " -O " + self.tumor_calculatecontamination_table 
 
         # Filter for confident somatic calls using FilterMutectCalls 
         filter_mutect_calls = "gatk FilterMutectCalls " + \
-                                "-V " + self.output + \
-                                "--contamination-table " + self.tumor_calculatecontamination_table + \
-                                "-O "  + self.output_filtered
+                                " -V " + self.output + \
+                                " --contamination-table " + self.tumor_calculatecontamination_table + \
+                                " -O "  + self.output_filtered
 
         return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls])
 
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output=None, bamout=None ):
+                 target_bed=None, output=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -200,7 +200,7 @@ class Varscan2Somatic(Job):
         normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.output + "/" + self.normalid +".pileup "
         tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.output + "/" +  self.tumorid +".pileup "
 
-        varscan_cmd = "java -jar VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " +  \
+        varscan_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " +  \
                       self.output + "/"+ normalid + "-" + tumorid + "-varscan-somatic --output-vcf" 
 
         return normal_mpileup_cmd + " && " + tumor_mpileup_cmd + " && " + varscan_cmd
@@ -452,5 +452,15 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
         pipeline.add(mutect_somatic)
         d['mutect'] = mutect_somatic.output
+
+    if 'varscan' in callers:
+        varscan_somatic = Varscan2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
+                            normalid=normal_sample_str,
+                            reference_sequence=pipeline.refdata['reference_genome'],
+                            output=outdir
+                            )
+        varscan_somatic.jobname = "varscan-somatic/{}".format(cancer_capture_str)
+        pipeline.add(varscan_somatic)
+        #d['varscan'] = varscan_somatic.output
 
     return d
