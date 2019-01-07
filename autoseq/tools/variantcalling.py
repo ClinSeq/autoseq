@@ -201,7 +201,7 @@ class Varscan2Somatic(Job):
         tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.output + "/" +  self.tumorid +".pileup "
 
         varscan_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " +  \
-                      self.output + "/"+ normalid + "-" + tumorid + "-varscan-somatic --output-vcf" 
+                      self.output + "/"+ self.normalid + "-" + self.tumorid + "-varscan-somatic --output-vcf" 
 
         return normal_mpileup_cmd + " && " + tumor_mpileup_cmd + " && " + varscan_cmd
 
@@ -457,10 +457,10 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         varscan_somatic = Varscan2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
                             normalid=normal_sample_str,
                             reference_sequence=pipeline.refdata['reference_genome'],
-                            output=outdir
+                            output=outdir+"/variants"
                             )
         varscan_somatic.jobname = "varscan-somatic/{}".format(cancer_capture_str)
         pipeline.add(varscan_somatic)
-        #d['varscan'] = varscan_somatic.output
+        d['varscan'] = varscan_somatic.output + "/" + varscan_somatic.normalid + "-" + varscan_somatic.tumorid + "-varscan-somatic.snp.vcf" 
 
     return d
