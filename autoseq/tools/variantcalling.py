@@ -23,7 +23,6 @@ class HaplotypeCaller(Job):
 
         return haplotypecaller_cmd
 
-
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None,
@@ -96,21 +95,26 @@ class StrelkaSomatic(Job):
                                     " --normalBam " + self.input_normal + \
                                     " --tumorBam " + self.input_tumor + \
                                     " --ref " +  self.reference_sequence + \
-                                    " --indelCandidates " + self.input_indel_candidates
+                                    " --indelCandidates {}/results/variants/candidateSmallIndels.vcf.gz ".format(self.input_indel_candidates) + \
                                     " --runDir " + self.output_dir 
         
         cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
+
+        passed_snvs = "zcat " + self.output_dir + "/results/varaints/"
+
+
         return cmd
 
 class StrelkaGermline(Job):
     def __init__(self, input_bam=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output_dir=None ):
+                 target_bed=None, output_dir=None, output_filtered_vcf=None ):
         Job.__init__(self)
         self.input_bam = input_bam
         self.normalid = normalid
         self.reference_sequence = reference_sequence
         self.target_bed = target_bed
         self.output_dir = output_dir
+        self.output_filtered_vcf = output_filtered_vcf
         
     def command(self):
         required("", self.input_bam)
@@ -122,7 +126,12 @@ class StrelkaGermline(Job):
                                     " --ref " +  self.reference_sequence + \
                                     " --runDir " + self.output_dir
         cmd = configure_strelkagermline + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
-        return cmd
+
+        filter_passed_variants = "zcat " + self.output_dir + "/results/varaints/variants.vcf.gz" + \
+                                " | awk 'BEGIN { OFS = \"\\t\"} /^#/ { print $0 } {if($7==\"PASS\") print $0 }' " + \
+                                " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_filtered_vcf)
+        
+        return " && ".join([cmd, filter_passed_variants])
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -183,7 +192,7 @@ class Mutect2Somatic(Job):
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output=None ):
+                 target_bed=None, normal_pileup=None, tumor_pileup=None, output_snv=None, output_indel=None):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -191,7 +200,10 @@ class Varscan2Somatic(Job):
         self.normalid = normalid
         self.reference_sequence = reference_sequence
         self.target_bed = target_bed
-        self.output = output
+        self.normal_pileup = normal_pileup
+        self.tumor_pileup = tumor_pileup
+        self.output_indel = output_indel
+        self.output_snv = output_snv
         
     def command(self):
         required("", self.input_tumor)
@@ -200,24 +212,24 @@ class Varscan2Somatic(Job):
 
         # configuration
         # "-L " + \ We can update Interval List Once confirmed with Rebecka
-        normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.output + "/" + self.normalid +".pileup "
-        tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.output + "/" +  self.tumorid +".pileup "
+        normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.normal_pileup 
+        tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.tumor_pileup 
 
-        varscan_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.0.jar somatic " + self.output + "/" + self.normalid +".pileup " + self.output + "/" +  self.tumorid +".pileup " +  \
-                      self.output + "/"+ self.normalid + "-" + self.tumorid + "-varscan-somatic --output-vcf" 
+        varscan_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar somatic " + self.normal_pileup + " " + self.tumor_pileup + \
+                      " --output-snp " + self.output_snv + \
+                      " --output-indel " + self.output_indel + \
+                      " --output-vcf 1" 
 
-        bgzip_index = "bgzip "+ self.output + "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.indel.vcf && bgzip " + \
-                self.output + "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.snp.vcf && bcftools index " + self.output + \
-                 "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.indel.vcf.gz && bcftools index " + self.output + "/" + \
-                 self.normalid + "-" + self.tumorid + "-varscan-somatic.snp.vcf.gz "
+        # bgzip_index = "bgzip "+ self.output_snv +" && bgzip " + self.output_indel + " && bcftools index " + self.output_snv + \
+        #               ".gz && bcftools index " + self.output_indel + ".gz "
 
-        vcf_concat = "bcftools concat -a " + self.output + "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.snp.vcf.gz " + \
-                self.output + "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.indel.vcf.gz | bcftools sort -O v -o" + \
-                self.output + "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.all.vcf "
+        # vcf_concat = "bcftools concat -a " + self.output_snv +".gz " + self.output_indel + ".gz | bcftools sort -O v " + \
+        #               " -o " + self.output_all
 
-        varscan_filter = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output + "/" + self.normalid + "-" + self.tumorid + "-varscan-somatic.all.vcf " 
+        somatic_filter = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_indel + \
+                        " && java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_snv 
 
-        return " && ".join(normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, bgzip_index, vcf_concat, varscan_filter)
+        return " && ".join([normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, somatic_filter])
 
 
 class VarDictForPureCN(Job):
@@ -446,12 +458,13 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
                           normalid=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
-                          input_indel_candidates="{}/variants/{}-{}-manta-somatic/results/variants/candidateSmallIndels.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
+                          input_indel_candidates="{}/variants/{}-{}-manta-somatic".format(outdir, cancer_capture_str, normal_capture_str),
                           output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, cancer_capture_str, normal_capture_str)
                           )
         strelka_somatic.jobname = "strelka-somatic-workflow/{}".format(cancer_capture_str)
         pipeline.add(strelka_somatic)
-        d['strelka'] = strelka_somatic.output_dir+"/results/variants/somatic.snvs.vcf.gz"
+        d['strelka_snvs'] = strelka_somatic.output_dir+"/results/variants/somatic.snvs.vcf.gz"
+        d['strelka_indels'] = strelka_somatic.output_dir+"/results/variants/somatic.indels.vcf.gz"
 
     if 'mutect2' in callers:
         mutect_somatic = Mutect2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
@@ -466,16 +479,20 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           )
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
         pipeline.add(mutect_somatic)
-        d['mutect'] = mutect_somatic.output
+        d['mutect'] = mutect_somatic.output_filtered
 
     if 'varscan' in callers:
         varscan_somatic = Varscan2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
                             normalid=normal_sample_str,
                             reference_sequence=pipeline.refdata['reference_genome'],
-                            output=outdir+"/variants"
+                            normal_pileup="{}/variants/varscan/{}.pileup".format(outdir, normal_capture_str),
+                            tumor_pileup="{}/variants/varscan/{}.pileup".format(outdir, cancer_capture_str),   
+                            output_snv="{}/variants/varscan/{}-{}-varscan.snp.vcf".format(outdir, normal_capture_str, cancer_capture_str) ,
+                            output_indel="{}/variants/varscan/{}-{}-varscan.indel.vcf".format(outdir, normal_capture_str, cancer_capture_str) 
                             )
         varscan_somatic.jobname = "varscan-somatic/{}".format(cancer_capture_str)
         pipeline.add(varscan_somatic)
-        d['varscan'] = varscan_somatic.output + "/" + varscan_somatic.normalid + "-" + varscan_somatic.tumorid + "-varscan-somatic.snp.vcf" 
+        d['varscan_snv'] = varscan_somatic.output_snv[:-3] + "Somatic.vcf"
+        d['varscan_indel'] = varscan_somatic.output_indel[:-3] + "Somatic.vcf"   
 
     return d

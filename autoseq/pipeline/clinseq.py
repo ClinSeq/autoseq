@@ -513,7 +513,8 @@ class ClinseqPipeline(PypedreamPipeline):
         strelka_germline = StrelkaGermline(input_bam=bam,
                           normalid=capture_str,
                           reference_sequence=self.refdata['reference_genome'],
-                          output_dir="{}/variants/{}-strelka-germline".format(self.outdir, capture_str)
+                          output_dir="{}/variants/{}-strelka-germline".format(self.outdir, capture_str),
+                          output_filtered_vcf="{}/variants/{capture_str}-strelka-germline/results/variants/{capture_str}.strelka.passed.vcf.gz".format(self.outdir, capture_str=capture_str)
                           )
         strelka_germline.jobname = "strelka-germline-workflow/{}".format(capture_str)
 
