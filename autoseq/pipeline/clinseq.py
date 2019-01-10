@@ -764,7 +764,7 @@ class ClinseqPipeline(PypedreamPipeline):
             min_num_reads=self.get_job_param('vardict-min-num-reads'))
 
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].somatic_vcf = \
-            somatic_variants.values()[0]
+            somatic_variants['vardict']
 
     def configure_vep(self, normal_capture, cancer_capture):
         if not self.vep_data_is_available():
@@ -782,7 +782,7 @@ class ClinseqPipeline(PypedreamPipeline):
         vep.vep_dir = self.refdata['vep_dir']
         vep.output_vcf = "{}/variants/{}-{}.somatic.vep.vcf.gz".format(
             self.outdir, cancer_capture_str, normal_capture_str)
-        vep.jobname = "vep-freebayes-somatic/{}".format(cancer_capture_str)
+        vep.jobname = "vep-vardict-somatic/{}".format(cancer_capture_str)
         vep.additional_options = self.get_job_param("vep-additional-options")
         self.add(vep)
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].vepped_vcf = \
