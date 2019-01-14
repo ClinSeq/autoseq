@@ -1,6 +1,6 @@
 from pypedream.pipeline.pypedreampipeline import PypedreamPipeline
 from autoseq.util.path import normpath, stripsuffix
-from autoseq.tools.alignment import align_library
+from autoseq.tools.alignment import align_library, Realignment
 from autoseq.tools.cnvcalling import Cns2Seg, CNVkit, CNVkitFix, QDNASeq
 from autoseq.tools.purity import PureCN
 from autoseq.tools.igv import MakeAllelicFractionTrack, MakeCNVkitTracks, MakeQDNAseqTracks
@@ -412,6 +412,15 @@ class ClinseqPipeline(PypedreamPipeline):
         merge_bams.jobname = "picard-mergebams-{}".format(capture_str)
         self.add(merge_bams)
 
+        # Configure Realignment:
+        realignment = Realignment()
+        realignment.input_bam = merge_bams.output_bam
+        realignment.output_bam = "{}/bams/{}/{}-realigned.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
+        realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, unique_capture.capture_kit_id, capture_str)
+        realignment.reference_genome = self.refdata['reference_genome']
+        realignment.known_indels = self.refdata['dbSNP']
+        self.add(realignment)
+
         # Configure duplicate marking:
         mark_dups_bam_filename = \
             "{}/bams/{}/{}-nodups.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
@@ -419,7 +428,7 @@ class ClinseqPipeline(PypedreamPipeline):
             "{}/qc/picard/{}/{}-markdups-metrics.txt".format(
                 self.outdir, unique_capture.capture_kit_id, capture_str)
         markdups = PicardMarkDuplicates(
-            merge_bams.output_bam, mark_dups_bam_filename, mark_dups_metrics_filename)
+            realignment.output_bam, mark_dups_bam_filename, mark_dups_metrics_filename)
         markdups.is_intermediate = False
         self.add(markdups)
 

@@ -88,6 +88,40 @@ class Skewer(Job):
         return " && ".join([mkdir_cmd, skewer_cmd, copy_output_cmd, copy_stats_cmd, rm_cmd])
 
 
+class Realignment(Job):
+    def __init__(self,):
+        Job.__init__(self)
+        self.input_bam = None
+        self.output_bam = None
+        self.reference_genome = None
+        self.known_indels = None
+        self.target_intervals = None
+        self.jobname = "Realignment"
+
+    def command(self):
+
+        # creating target intervals for indel realignment 
+        # Param: -L can be added to specify the genomic region
+        target_creator_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                            " -T RealignerTargetCreator " + \
+                            " -R " + self.reference_genome + \
+                            " -known " + self.known_indels + \
+                            " -I " + self.input_bam + \
+                            " -o " + self.target_intervals 
+
+        realign_reads_cmd = "java -Xmx8G " + \
+                            required("-Djava.io.tmpdir=", self.scratch) + \
+                            " -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                            " -T IndelRealigner " + \
+                            " -R " + self.reference_genome + \
+                            " -targetIntervals " + self.target_intervals + \
+                            " -known " + self.known_indels + \
+                            " -I " + self.input_bam + \
+                            " -o " + self.output_bam
+
+        return " && ".join([target_creator_cmd, realign_reads_cmd])
+
+
 def align_library(pipeline, fq1_files, fq2_files, clinseq_barcode, ref, outdir, maxcores=1,
                   remove_duplicates=True):
     """
