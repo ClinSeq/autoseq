@@ -7,7 +7,8 @@ from autoseq.tools.igv import MakeAllelicFractionTrack, MakeCNVkitTracks, MakeQD
 from autoseq.util.library import find_fastqs
 from autoseq.tools.picard import PicardCollectInsertSizeMetrics, PicardCollectOxoGMetrics, \
     PicardMergeSamFiles, PicardMarkDuplicates, PicardCollectHsMetrics, PicardCollectWgsMetrics
-from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, call_somatic_variants, StrelkaGermline
+from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, \
+    call_somatic_variants, StrelkaGermline, SomaticSeq 
 from autoseq.tools.msi import MsiSensor, Msings
 from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateContestVCFs
 from autoseq.tools.qc import *
@@ -418,7 +419,8 @@ class ClinseqPipeline(PypedreamPipeline):
         realignment.output_bam = "{}/bams/{}/{}-realigned.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.reference_genome = self.refdata['reference_genome']
-        realignment.known_indels = self.refdata['dbSNP']
+        realignment.known_indel1 = self.refdata["1KG"]
+        realignment.known_indel2 = self.refdata["Mills_and_1KG_gold_standard"]
         self.add(realignment)
 
         # Configure duplicate marking:
@@ -500,7 +502,9 @@ class ClinseqPipeline(PypedreamPipeline):
         haplotypecaller = HaplotypeCaller()
         haplotypecaller.input_bam = bam
         haplotypecaller.reference_sequence = self.refdata['reference_genome']
-        haplotypecaller.output = "{}/variants/{}.haplotypecaller-germline.vcf.gz".format(self.outdir, capture_str)
+        haplotypecaller.interval_list = self.refdata['targets'][targets]['targets-interval_list-slopped20']
+        haplotypecaller.dbSNP = self.refdata['dbSNP']
+        haplotypecaller.output = "{}/variants/haplotypecaller/{}.haplotypecaller-germline.vcf.gz".format(self.outdir, capture_str)
         haplotypecaller.jobname = "gatk-haplotypecaller-germline-{}".format(capture_str)
 
         self.add(haplotypecaller)
@@ -523,6 +527,7 @@ class ClinseqPipeline(PypedreamPipeline):
                           normalid=capture_str,
                           reference_sequence=self.refdata['reference_genome'],
                           output_dir="{}/variants/{}-strelka-germline".format(self.outdir, capture_str),
+                          target_bed=self.refdata['targets'][targets]['targets-bed-slopped20'] ,
                           output_filtered_vcf="{}/variants/{capture_str}-strelka-germline/results/variants/{capture_str}.strelka.passed.vcf.gz".format(self.outdir, capture_str=capture_str)
                           )
         strelka_germline.jobname = "strelka-germline-workflow/{}".format(capture_str)
@@ -771,6 +776,19 @@ class ClinseqPipeline(PypedreamPipeline):
             outdir=self.outdir, callers=['vardict','strelka','manta','mutect2','varscan'],
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
             min_num_reads=self.get_job_param('vardict-min-num-reads'))
+
+        somatic_seq = SomaticSeq()
+        somatic_seq.input_normal = normal_bam
+        somatic_seq.input_tumor = cancer_bam
+        somatic_seq.reference_sequence = self.refdata['reference_genome']
+        somatic_seq.input_mutect_vcf = somatic_variants['mutect2']
+        somatic_seq.input_varscan_snv = somatic_variants['varscan_snv']
+        somatic_seq.input_varscan_indel = somatic_variants['varscan_indel'] 
+        somatic_seq.input_vardict_vcf = somatic_variants['vardict']
+        somatic_seq.input_strelka_snv = somatic_variants['strelka_snvs']
+        somatic_seq.input_strelka_indel = somatic_variants['strelka_indels']
+        somatic_seq.output_dir = "{}/variants/{}-{}-somatic-seq".format(self.outdir, normal_capture, cancer_capture)
+        self.add(somatic_seq)
 
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].somatic_vcf = \
             somatic_variants['vardict']

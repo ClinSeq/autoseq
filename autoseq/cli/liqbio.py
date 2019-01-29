@@ -23,7 +23,7 @@ def liqbio(ctx, sample):
 
     if ctx.obj['jobdb']:
         mkdir(os.path.dirname(ctx.obj['jobdb']))
-
+    
     ctx.obj['pipeline'] = LiqBioPipeline(sampledata=sampledata,
                                          refdata=ctx.obj['refdata'],
                                          job_params=ctx.obj['job_params'],
@@ -33,6 +33,7 @@ def liqbio(ctx, sample):
                                          runner=ctx.obj['runner'],
                                          jobdb=ctx.obj['jobdb'],
                                          dot_file=ctx.obj['dot_file'],
+                                         umi=ctx.obj['umi'],
                                          scratch=ctx.obj['scratch'])
 
     # start main analysis

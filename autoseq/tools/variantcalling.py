@@ -11,14 +11,18 @@ class HaplotypeCaller(Job):
         Job.__init__(self)
         self.input_bam = None
         self.reference_sequence = None
+        self.dbSNP = None
+        self.interval_list = None
         self.java_options = "--java-options -Xmx4g"
         self.output = None
-        self.jobname = "gatk-haplotype-somatic"
+        self.jobname = "gatk-haplotype-germline"
 
     def command(self):
         haplotypecaller_cmd = "gatk {} HaplotypeCaller ".format(self.java_options) + \
                         required(" -R ", self.reference_sequence) + \
                         required(" -I ", self.input_bam) + \
+                        " -L " + self.interval_list + \
+                        " --dbsnp " + self.dbSNP + \
                         required(" -O ", self.output) 
 
         return haplotypecaller_cmd
@@ -93,10 +97,11 @@ class StrelkaSomatic(Job):
         required("", self.reference_sequence)
 
         # configuration
-        configure_strelkasomatic = "configureStrelkaSomaticWorkflow.py --exome " + \
+        configure_strelkasomatic = "configureStrelkaSomaticWorkflow.py --targeted " + \
                                     " --normalBam " + self.input_normal + \
                                     " --tumorBam " + self.input_tumor + \
                                     " --ref " +  self.reference_sequence + \
+                                    " --callRegions " + self.target_bed + \
                                     " --indelCandidates {}/results/variants/candidateSmallIndels.vcf.gz ".format(self.input_indel_candidates) + \
                                     " --runDir " + self.output_dir 
         
@@ -131,6 +136,7 @@ class StrelkaGermline(Job):
         configure_strelkagermline = "configureStrelkaGermlineWorkflow.py " + \
                                     " --bam " + self.input_bam + \
                                     " --ref " +  self.reference_sequence + \
+                                    " --targeted --callRegions " + self.target_bed + \
                                     " --runDir " + self.output_dir
         cmd = configure_strelkagermline + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
 
@@ -142,7 +148,8 @@ class StrelkaGermline(Job):
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output=None, bamout=None, exac=None, tumor_getpileupsummaries_table=None, tumor_calculatecontamination_table=None, output_filtered=None ):
+                 target_bed=None, output=None, bamout=None, exac=None, interval_list=None, tumor_getpileupsummaries_table=None, 
+                 tumor_calculatecontamination_table=None, output_filtered=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -153,6 +160,7 @@ class Mutect2Somatic(Job):
         self.output = output
         self.bamout = bamout
         self.exac_genome_vcf = exac
+        self.interval_list = interval_list
         self.tumor_getpileupsummaries_table = tumor_getpileupsummaries_table
         self.tumor_calculatecontamination_table = tumor_calculatecontamination_table
         self.output_filtered = output_filtered
@@ -165,13 +173,14 @@ class Mutect2Somatic(Job):
         # configuration
         # "-L " + \ We can update Interval List Once confirmed with Rebecka
         # Call somatic short variants and generate a bamout with Mutect2
+        # --genome-resource , --af-of-alleles-not-in-resource
         mutectsomatic_cmd = "gatk --java-options '-Xmx2g' Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
                                     " -I " + self.input_normal + \
                                     " -tumor " + self.tumorid + \
                                     " -normal " + self.normalid + \
-                                    " --af-of-alleles-not-in-resource 0.0000025 " + \
+                                    " -L " + self.interval_list + \
                                     " --disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
                                     " -bamout " + self.bamout + \
                                     " -O " + self.output
@@ -195,7 +204,6 @@ class Mutect2Somatic(Job):
                                 " -O "  + self.output_filtered
 
         return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls])
-
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -225,6 +233,7 @@ class Varscan2Somatic(Job):
         varscan_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar somatic " + self.normal_pileup + " " + self.tumor_pileup + \
                       " --output-snp " + self.output_snv + \
                       " --output-indel " + self.output_indel + \
+                      " --min-coverage 3 --min-var-freq 0.02 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 0" + \
                       " --output-vcf 1" 
 
         # bgzip_index = "bgzip "+ self.output_snv +" && bgzip " + self.output_indel + " && bcftools index " + self.output_snv + \
@@ -237,7 +246,6 @@ class Varscan2Somatic(Job):
                         " && java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_snv 
 
         return " && ".join([normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, somatic_filter])
-
 
 class VarDictForPureCN(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -289,6 +297,37 @@ class VarDictForPureCN(Job):
 
         return " && ".join([vardict_cmd, annotate_cmd, rm_tmp_cmd])
 
+class SomaticSeq(Job):
+  def __init__(self):
+    Job.__init__(self)
+    self.input_normal = None
+    self.input_tumor = None
+    self.reference_sequence = None
+    self.input_mutect_vcf = None
+    self.input_varscan_snv = None
+    self.input_varscan_indel = None
+    self.input_vardict_vcf = None
+    self.input_strelka_snv = None
+    self.input_strelka_indel = None
+    self.output_dir = None
+    self.jobname = 'somaticseq-vcf-merging'
+
+  def command(self):
+
+    somatic_seq = "somaticseq/somaticseq/run_somaticseq.py " + \
+                  " --output-directory " + self.output_dir + \
+                  " --genome-reference " + self.reference_sequence +  \
+                  " paired " + \
+                  " --tumor-bam-file " + self.input_tumor  + \
+                  " --normal-bam-file " + self.input_normal + \
+                  " --mutect2-vcf " + self.input_mutect_vcf + \
+                  " --varscan-snv " + self.input_varscan_snv + \
+                  " --varscan-indel " + self.input_varscan_indel + \
+                  " --vardict-vcf " + self.input_vardict_vcf + \
+                  " --strelka-snv " + self.input_strelka_snv + \
+                  " --strelka-indel " + self.input_strelka_indel
+    
+    return somatic_seq                  
 
 class VEP(Job):
     def __init__(self):
@@ -318,7 +357,6 @@ class VEP(Job):
                  " && tabix -p vcf {}".format(self.output_vcf)
 
         return cmdstr
-
 
 class VcfAddSample(Job):
     """
@@ -353,7 +391,6 @@ class VcfAddSample(Job):
         rm_filt_cmd = "rm " + filt_vcf
         return " && ".join([filt_vcf_cmd, vcf_add_sample_cmd, rm_filt_cmd])
 
-
 class VcfFilter(Job):
     def __init__(self):
         Job.__init__(self)
@@ -369,7 +406,6 @@ class VcfFilter(Job):
                required("-f ", self.filter) + \
                "| bgzip " + required(" > ", self.output) + \
                " && tabix -p vcf {output}".format(output=self.output)
-
 
 class CurlSplitAndLeftAlign(Job):
     def __init__(self):
@@ -388,7 +424,6 @@ class CurlSplitAndLeftAlign(Job):
                "| bgzip " + required(" > ", self.output) + \
                " && tabix -p vcf {output}".format(output=self.output)
 
-
 class InstallVep(Job):
     def __init__(self):
         Job.__init__(self)
@@ -400,7 +435,6 @@ class InstallVep(Job):
                required("--CACHEDIR ", self.output_dir) + \
                " && vep_convert_cache.pl " + required("--dir ", self.output_dir) + \
                " --species homo_sapiens --version 83_GRCh37"
-
 
 def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, normal_capture,
                           target_name, outdir, callers=['vardict', 'strelka'],
@@ -466,6 +500,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           normalid=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
                           input_indel_candidates="{}/variants/{}-{}-manta-somatic".format(outdir, cancer_capture_str, normal_capture_str),
+                          target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],
                           output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, cancer_capture_str, normal_capture_str),
                           output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
                           output_indels_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.indels.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
@@ -481,14 +516,15 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           reference_sequence=pipeline.refdata['reference_genome'],
                           output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
                           bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, cancer_capture_str, normal_capture_str),
-                          exac=pipeline.refdata['exac'],
+                          exac=pipeline.refdata['targets'][capture_name]['targets-interval_list-slopped20'],
+                          interval_list=pipeline.refdata['exac'] ,
                           tumor_getpileupsummaries_table= "{}/variants/mutect/{}-mutect-tumor-pileupsummary-table".format(outdir, cancer_capture_str),
                           tumor_calculatecontamination_table= "{}/variants/mutect/{}-mutect-tumor-contamination-table".format(outdir, cancer_capture_str),
                           output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str)
                           )
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
         pipeline.add(mutect_somatic)
-        d['mutect'] = mutect_somatic.output_filtered
+        d['mutect2'] = mutect_somatic.output_filtered
 
     if 'varscan' in callers:
         varscan_somatic = Varscan2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,

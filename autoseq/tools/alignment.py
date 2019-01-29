@@ -94,7 +94,8 @@ class Realignment(Job):
         self.input_bam = None
         self.output_bam = None
         self.reference_genome = None
-        self.known_indels = None
+        self.known_indel1 = None
+        self.known_indel2 = None
         self.target_intervals = None
         self.jobname = "Realignment"
 
@@ -105,7 +106,8 @@ class Realignment(Job):
         target_creator_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                             " -T RealignerTargetCreator " + \
                             " -R " + self.reference_genome + \
-                            " -known " + self.known_indels + \
+                            " -known " + self.known_indel1 + \
+                            " -known " + self.known_indel2 + \
                             " -I " + self.input_bam + \
                             " -o " + self.target_intervals 
 
@@ -115,7 +117,8 @@ class Realignment(Job):
                             " -T IndelRealigner " + \
                             " -R " + self.reference_genome + \
                             " -targetIntervals " + self.target_intervals + \
-                            " -known " + self.known_indels + \
+                            " -known " + self.known_indel1 + \
+                            " -known " + self.known_indel2 + \
                             " -I " + self.input_bam + \
                             " -o " + self.output_bam
 
@@ -271,3 +274,43 @@ def align_pe(pipeline, fq1_files, fq2_files, clinseq_barcode, ref, outdir, maxco
     pipeline.add(bwa)
 
     return bwa.output
+
+def fq_trimming(pipeline, fq1_files, fq2_files, clinseq_barcode, ref, outdir, maxcores=1):
+    fq1_abs = [normpath(x) for x in fq1_files]
+    fq2_abs = [normpath(x) for x in fq2_files]
+    logging.debug("Trimming {} and {}".format(fq1_abs, fq2_abs))
+    pairs = [(fq1_abs[k], fq2_abs[k]) for k in range(len(fq1_abs))]
+
+    fq1_trimmed = []
+    fq2_trimmed = []
+
+    for fq1, fq2 in pairs:
+        skewer = Skewer()
+        skewer.input1 = fq1
+        skewer.input2 = fq2
+        skewer.output1 = outdir + "/skewer/libs/{}".format(os.path.basename(fq1))
+        skewer.output2 = outdir + "/skewer/libs/{}".format(os.path.basename(fq2))
+        skewer.stats = outdir + "/skewer/libs/skewer-stats-{}.log".format(os.path.basename(fq1))
+        skewer.threads = maxcores
+        skewer.jobname = "skewer/{}".format(os.path.basename(fq1))
+        skewer.scratch = pipeline.scratch
+        skewer.is_intermediate = True
+        fq1_trimmed.append(skewer.output1)
+        fq2_trimmed.append(skewer.output2)
+        pipeline.add(skewer)
+
+    cat1 = Cat()
+    cat1.input = fq1_trimmed
+    cat1.output = outdir + "/skewer/{}-concatenated_1.fastq.gz".format(clinseq_barcode)
+    cat1.jobname = "cat1/{}".format(clinseq_barcode)
+    cat1.is_intermediate = True
+    pipeline.add(cat1)
+
+    cat2 = Cat()
+    cat2.input = fq2_trimmed
+    cat2.jobname = "cat2/{}".format(clinseq_barcode)
+    cat2.output = outdir + "/skewer/{}-concatenated_2.fastq.gz".format(clinseq_barcode)
+    cat2.is_intermediate = True
+    pipeline.add(cat2)
+
+    return cat1.output, cat2.output
