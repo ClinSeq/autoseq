@@ -165,9 +165,9 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.configure_manta(normal_capture, cancer_capture)
 
-        if self.refdata['targets'][capture_name]['purecn_targets']:
-            self.configure_purecn(normal_capture, cancer_capture)
-            self.configure_liqbio_cna(normal_capture, cancer_capture)
+        # if self.refdata['targets'][capture_name]['purecn_targets']:
+        #     self.configure_purecn(normal_capture, cancer_capture)
+        #     self.configure_liqbio_cna(normal_capture, cancer_capture)
 
 
     def configure_umi_processing(self):

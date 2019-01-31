@@ -516,8 +516,8 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           reference_sequence=pipeline.refdata['reference_genome'],
                           output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
                           bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, cancer_capture_str, normal_capture_str),
-                          exac=pipeline.refdata['targets'][capture_name]['targets-interval_list-slopped20'],
-                          interval_list=pipeline.refdata['exac'] ,
+                          exac=pipeline.refdata['exac'] ,
+                          interval_list=pipeline.refdata['targets'][capture_name]['targets-interval_list-slopped20'],
                           tumor_getpileupsummaries_table= "{}/variants/mutect/{}-mutect-tumor-pileupsummary-table".format(outdir, cancer_capture_str),
                           tumor_calculatecontamination_table= "{}/variants/mutect/{}-mutect-tumor-contamination-table".format(outdir, cancer_capture_str),
                           output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str)
