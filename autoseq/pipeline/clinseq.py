@@ -777,6 +777,8 @@ class ClinseqPipeline(PypedreamPipeline):
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
             min_num_reads=self.get_job_param('vardict-min-num-reads'))
 
+        normal_capture_str = compose_lib_capture_str(normal_capture)
+        cancer_capture_str = compose_lib_capture_str(cancer_capture)
         somatic_seq = SomaticSeq()
         somatic_seq.input_normal = normal_bam
         somatic_seq.input_tumor = cancer_bam
@@ -787,7 +789,7 @@ class ClinseqPipeline(PypedreamPipeline):
         somatic_seq.input_vardict_vcf = somatic_variants['vardict']
         somatic_seq.input_strelka_snv = somatic_variants['strelka_snvs']
         somatic_seq.input_strelka_indel = somatic_variants['strelka_indels']
-        somatic_seq.output_dir = "{}/variants/{}-{}-somatic-seq".format(self.outdir, normal_capture, cancer_capture)
+        somatic_seq.output_dir = "{}/variants/{}-{}-somatic-seq".format(self.outdir, normal_capture_str, cancer_capture_str)
         self.add(somatic_seq)
 
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].somatic_vcf = \

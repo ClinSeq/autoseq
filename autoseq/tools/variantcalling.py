@@ -484,7 +484,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           normalid=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
                           reference_dict=pipeline.refdata['reference_dict'],
-                          target_bed=pipeline.refdata['targets'][target_name]['targets-bed-slopped20'],
+                          target_bed=pipeline.refdata['targets'][target_name]['targets-bed-slopped20'][:-3],
                           output="{}/variants/vardict/{}-{}.vardict-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
                           min_alt_frac=min_alt_frac, min_num_reads=min_num_reads,
                           blacklist_bed=blacklist_bed
