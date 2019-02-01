@@ -314,6 +314,8 @@ class SomaticSeq(Job):
 
   def command(self):
 
+    somatic_seq_env = "conda activate somaticseqenv"
+
     somatic_seq = "somaticseq/somaticseq/run_somaticseq.py " + \
                   " --output-directory " + self.output_dir + \
                   " --genome-reference " + self.reference_sequence +  \
@@ -326,8 +328,10 @@ class SomaticSeq(Job):
                   " --vardict-vcf " + self.input_vardict_vcf + \
                   " --strelka-snv " + self.input_strelka_snv + \
                   " --strelka-indel " + self.input_strelka_indel
+
+    deactivate_ssenv = "conda deactivate"
     
-    return somatic_seq                  
+    return " && ".join([somatic_seq_env, somatic_seq, deactivate_ssenv])
 
 class VEP(Job):
     def __init__(self):
