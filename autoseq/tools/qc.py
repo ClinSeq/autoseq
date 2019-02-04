@@ -35,7 +35,7 @@ class FastQC(Job):
         self.jobname = "fastqc"
 
     def command(self):
-        return "/home/sarmur/Downloads/FastQC/fastqc -o {} ".format(self.outdir) + \
+        return "fastqc -o {} ".format(self.outdir) + \
                conditional(self.extract, "--extract") + \
                " --nogroup {}".format(self.input)
 
