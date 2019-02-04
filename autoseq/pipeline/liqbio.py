@@ -171,7 +171,8 @@ class LiqBioPipeline(ClinseqPipeline):
 
 
     def configure_umi_processing(self):
-
+        # configure for UMI SNV calling pipeline
+        #
         capture_to_barcodes = self.get_unique_capture_to_clinseq_barcodes()
         for unique_capture in capture_to_barcodes.keys():
             capture_kit = unique_capture.capture_kit_id
@@ -196,19 +197,23 @@ class LiqBioPipeline(ClinseqPipeline):
             realigned_bam2 = self.configure_alignment_with_umi(bamfile=consensus_reads, 
                                                     clinseq_barcode=clinseq_barcode, 
                                                     capture_kit=capture_kit, jobname='2')
+            filtered_bam = self.configure_consensus_read_filter(bam=realigned_bam2 ,
+                                                    clinseq_barcode=clinseq_barcode,
+                                                    capture_kit=capture_kit)
+
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
-
+        # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
         align_unmap_bam = AlignUnmappedBam()
         align_unmap_bam.input_bam = bamfile
         align_unmap_bam.reference_genome = self.refdata['reference_genome']
-        align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname
         self.add(align_unmap_bam)
 
         realingment = Realignment()
         realingment.input_bam = align_unmap_bam.output_bam
-        realingment.output_bam = "{}/bams/{}/{}.realigned.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        realingment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         realingment.reference_genome = self.refdata['reference_genome']
         realingment.known_indel1 = self.refdata['1KG']
         realingment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
@@ -219,7 +224,8 @@ class LiqBioPipeline(ClinseqPipeline):
         return realingment.output_bam
 
     def configure_fastq_to_bam(self, fq_files, clinseq_barcode, capture_kit):
-
+        # Extract UMIs from trimmed fastq and store in RX tag of unmapped bam (fgbio FastqToBam)
+        
         library = parse_prep_id(clinseq_barcode)
         sample = compose_sample_str(extract_unique_capture(clinseq_barcode))
 
@@ -250,8 +256,16 @@ class LiqBioPipeline(ClinseqPipeline):
 
         return call_consensus_reads.output_bam
 
+    def configure_consensus_read_filter(self, bam, clinseq_barcode, capture_kit):
 
+        filter_con_reads = FilterConsensusReads()
+        filter_con_reads.input_bam = bam
+        filter_con_reads.reference_genome = self.refdata['reference_genome']
+        filter_con_reads.output_bam = "{}/bams/{}/{}.consensus.filtered.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        filter_con_reads.jobname = "filter-consensus-reads-{}".format(clinseq_barcode)
+        self.add(filter_con_reads)
 
+        return filter_con_reads.output_bam
 
 
 

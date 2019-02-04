@@ -13,7 +13,7 @@ class HaplotypeCaller(Job):
         self.reference_sequence = None
         self.dbSNP = None
         self.interval_list = None
-        self.java_options = "--java-options -Xmx4g"
+        self.java_options = "--java-options -Xmx10g"
         self.output = None
         self.jobname = "gatk-haplotype-germline"
 
@@ -174,7 +174,7 @@ class Mutect2Somatic(Job):
         # "-L " + \ We can update Interval List Once confirmed with Rebecka
         # Call somatic short variants and generate a bamout with Mutect2
         # --genome-resource , --af-of-alleles-not-in-resource
-        mutectsomatic_cmd = "gatk --java-options '-Xmx2g' Mutect2 " + \
+        mutectsomatic_cmd = "gatk --java-options '-Xmx10g' Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
                                     " -I " + self.input_normal + \
@@ -314,7 +314,7 @@ class SomaticSeq(Job):
 
   def command(self):
 
-    somatic_seq_env = "conda activate somaticseqenv"
+    somatic_seq_env = "source activate somaticseqenv"
 
     somatic_seq = "somaticseq/somaticseq/run_somaticseq.py " + \
                   " --output-directory " + self.output_dir + \
@@ -329,7 +329,7 @@ class SomaticSeq(Job):
                   " --strelka-snv " + self.input_strelka_snv + \
                   " --strelka-indel " + self.input_strelka_indel
 
-    deactivate_ssenv = "conda deactivate"
+    deactivate_ssenv = "source deactivate"
     
     return " && ".join([somatic_seq_env, somatic_seq, deactivate_ssenv])
 

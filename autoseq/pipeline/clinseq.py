@@ -424,13 +424,20 @@ class ClinseqPipeline(PypedreamPipeline):
         self.add(realignment)
 
         # Configure duplicate marking:
+        self.configure_markdups(realignment.output_bam , unique_capture)
+        
+
+    def configure_markdups(self, bamfile, unique_capture):
+
+        capture_str = compose_lib_capture_str(unique_capture)
+
         mark_dups_bam_filename = \
             "{}/bams/{}/{}-nodups.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         mark_dups_metrics_filename = \
             "{}/qc/picard/{}/{}-markdups-metrics.txt".format(
                 self.outdir, unique_capture.capture_kit_id, capture_str)
         markdups = PicardMarkDuplicates(
-            realignment.output_bam, mark_dups_bam_filename, mark_dups_metrics_filename)
+            bamfile, mark_dups_bam_filename, mark_dups_metrics_filename)
         markdups.is_intermediate = False
         self.add(markdups)
 
@@ -441,6 +448,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.set_capture_bam(unique_capture, markdups.output_bam)
 
         self.qc_files.append(markdups.output_metrics)
+
 
     def configure_fastq_qcs(self):
         """
@@ -960,8 +968,8 @@ class ClinseqPipeline(PypedreamPipeline):
         contest_vcf_generation = CreateContestVCFs()
         normal_capture_name = self.get_capture_name(normal_capture.capture_kit_id)
         cancer_capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
-        normal_targets = self.refdata['targets'][normal_capture_name]['targets-bed-slopped20']
-        cancer_targets = self.refdata['targets'][cancer_capture_name]['targets-bed-slopped20']
+        normal_targets = self.refdata['targets'][normal_capture_name]['targets-bed-slopped20'][:-3]
+        cancer_targets = self.refdata['targets'][cancer_capture_name]['targets-bed-slopped20'][:-3]
         contest_vcf_generation.input_target_regions_bed_1 = normal_targets
         contest_vcf_generation.input_target_regions_bed_2 = cancer_targets
         contest_vcf_generation.input_population_vcf = self.refdata["swegene_common"]
@@ -1196,7 +1204,7 @@ class ClinseqPipeline(PypedreamPipeline):
         :param targets: Target capture name
         :return: bed file name
         """
-        return self.refdata['targets'][targets]['targets-bed-slopped20']
+        return self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
 
     def configure_panel_qc(self, unique_capture):
         """
@@ -1242,7 +1250,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.add(hsmetrics)
 
         sambamba = SambambaDepth()
-        sambamba.targets_bed = self.refdata['targets'][targets]['targets-bed-slopped20']
+        sambamba.targets_bed = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
         sambamba.input = bam
         sambamba.output = "{}/qc/sambamba/{}.sambamba-depth-targets.txt".format(
             self.outdir, capture_str)
