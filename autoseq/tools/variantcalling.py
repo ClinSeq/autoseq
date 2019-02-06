@@ -310,6 +310,9 @@ class SomaticSeq(Job):
     self.input_strelka_snv = None
     self.input_strelka_indel = None
     self.output_dir = None
+    self.output_snv = None
+    self.output_indel = None
+    self.output_vcf = None
     self.jobname = 'somaticseq-vcf-merging'
 
   def command(self):
@@ -330,8 +333,18 @@ class SomaticSeq(Job):
                   " --strelka-indel " + self.input_strelka_indel
 
     deactivate_ssenv = "source deactivate"
+
+    merge_vcf = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                " -T CombineVariants " + \
+                " -R " + self.reference_sequence + \
+                " --variant " + self.output_snv + \
+                " --variant " + self.output_indel + \
+                " --assumeIdenticalSamples " + \
+                " | bgzip > " + self.output_vcf 
     
-    return " && ".join([somatic_seq_env, somatic_seq, deactivate_ssenv])
+    vcf_tabix = "tabix -p vcf " + self.output_vcf
+    
+    return " && ".join([somatic_seq_env, somatic_seq, deactivate_ssenv, merge_vcf, vcf_tabix])
 
 class VEP(Job):
     def __init__(self):

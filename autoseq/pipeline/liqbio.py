@@ -12,7 +12,7 @@ __author__ = 'thowhi'
 class LiqBioPipeline(ClinseqPipeline):
     def __init__(self, sampledata, refdata, job_params, outdir, libdir, umi, maxcores=1, scratch="/scratch/tmp/tmp",
                  **kwargs):
-        ClinseqPipeline.__init__(self, sampledata, refdata, job_params, outdir, libdir,
+        ClinseqPipeline.__init__(self, sampledata, refdata, job_params, outdir, libdir, umi,
                                  maxcores, scratch, **kwargs)
 
         # Set the min alt frac value:
@@ -24,10 +24,11 @@ class LiqBioPipeline(ClinseqPipeline):
         self.check_sampledata()
 
         if umi:
+            # Configure the umi processes from fastq to bam file:
             self.configure_umi_processing()
-
-        # Configure alignment and merging of fastq data for all clinseq barcodes:
-        self.configure_align_and_merge()
+        else:
+            # Configure alignment and merging of fastq data for all clinseq barcodes:
+            self.configure_align_and_merge()
 
         # Configure all panel analyses:
         self.configure_panel_analyses()
@@ -54,7 +55,7 @@ class LiqBioPipeline(ClinseqPipeline):
         self.configure_multi_qc()
 
     def configure_single_capture_analysis_liqbio(self, unique_capture):
-        input_bam = self.get_capture_bam(unique_capture)
+        input_bam = self.get_capture_bam(unique_capture, umi=False)
         sample_str = compose_lib_capture_str(unique_capture)
 
         # Configure svcaller analysis for each event type:
@@ -105,8 +106,8 @@ class LiqBioPipeline(ClinseqPipeline):
         :param normal_capture: A unique normal sample library capture
         :param cancer_capture: A unique cancer sample library capture
         """
-        cancer_bam = self.get_capture_bam(cancer_capture)
-        normal_bam = self.get_capture_bam(normal_capture)
+        cancer_bam = self.get_capture_bam(cancer_capture, umi=False)
+        normal_bam = self.get_capture_bam(normal_capture, umi=False)
         target_name = self.get_capture_name(cancer_capture.capture_kit_id)
 
         cancer_capture_str = compose_lib_capture_str(cancer_capture)
@@ -200,6 +201,10 @@ class LiqBioPipeline(ClinseqPipeline):
             filtered_bam = self.configure_consensus_read_filter(bam=realigned_bam2 ,
                                                     clinseq_barcode=clinseq_barcode,
                                                     capture_kit=capture_kit)
+            mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
+
+            self.set_capture_bam(unique_capture, filtered_bam, self.umi)
+
 
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
@@ -208,7 +213,7 @@ class LiqBioPipeline(ClinseqPipeline):
         align_unmap_bam.input_bam = bamfile
         align_unmap_bam.reference_genome = self.refdata['reference_genome']
         align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
-        align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname
+        align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
 
         realingment = Realignment()
@@ -218,7 +223,7 @@ class LiqBioPipeline(ClinseqPipeline):
         realingment.known_indel1 = self.refdata['1KG']
         realingment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
         realingment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
-        realingment.jobname = "realignment-" + jobname
+        realingment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
         self.add(realingment)
 
         return realingment.output_bam
@@ -235,6 +240,7 @@ class LiqBioPipeline(ClinseqPipeline):
         fastq_to_bam.sample = sample
         fastq_to_bam.library = library
         fastq_to_bam.output_bam = "{}/bams/{}/{}.unmapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        fastq_to_bam.jobname = "fastq-to-bam" + '-' + clinseq_barcode
         self.add(fastq_to_bam)
 
         return fastq_to_bam.output_bam
@@ -245,13 +251,13 @@ class LiqBioPipeline(ClinseqPipeline):
         group_reads.input_bam = bam
         group_reads.output_histogram = "{}/bams/{}/{}.grouped.bam.fs.txt".format(self.outdir, capture_kit, clinseq_barcode)
         group_reads.output_bam = "{}/bams/{}/{}.grouped.bam".format(self.outdir, capture_kit, clinseq_barcode)
-        group_reads.jobname = "group-reads-by-umi"
+        group_reads.jobname = "group-reads-by-umi" + '-' + clinseq_barcode
         self.add(group_reads)
 
         call_consensus_reads = CallDuplexConsensusReads()
         call_consensus_reads.input_bam = group_reads.output_bam
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
-        call_consensus_reads.jobname = "call-duplex-consensus-reads"
+        call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
         self.add(call_consensus_reads)
 
         return call_consensus_reads.output_bam

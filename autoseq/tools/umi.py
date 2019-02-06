@@ -12,7 +12,6 @@ class FastqToBam(Job):
 		self.output_bam = None
 		self.sample = None
 		self.library = None
-		self.jobname = "fastq-to-bam"
 
 	def command(self):
 
