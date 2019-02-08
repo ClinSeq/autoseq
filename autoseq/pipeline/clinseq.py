@@ -8,7 +8,7 @@ from autoseq.util.library import find_fastqs
 from autoseq.tools.picard import PicardCollectInsertSizeMetrics, PicardCollectOxoGMetrics, \
     PicardMergeSamFiles, PicardMarkDuplicates, PicardCollectHsMetrics, PicardCollectWgsMetrics
 from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, \
-    call_somatic_variants, StrelkaGermline, SomaticSeq 
+    call_somatic_variants, StrelkaGermline, SomaticSeq , MergeVCF
 from autoseq.tools.msi import MsiSensor, Msings
 from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateContestVCFs
 from autoseq.tools.qc import *
@@ -530,19 +530,6 @@ class ClinseqPipeline(PypedreamPipeline):
 
         self.add(haplotypecaller)
 
-        vepped_vcf = None
-        if self.vep_data_is_available():
-            vep_haplotypecaller = VEP()
-            vep_haplotypecaller.input_vcf = haplotypecaller.output
-            vep_haplotypecaller.threads = self.maxcores
-            vep_haplotypecaller.reference_sequence = self.refdata['reference_genome']
-            vep_haplotypecaller.vep_dir = self.refdata['vep_dir']
-            vep_haplotypecaller.output_vcf = "{}/variants/{}.haplotypecaller-germline.vep.vcf.gz".format(self.outdir, capture_str)
-            vep_haplotypecaller.jobname = "vep-gatk-haplotypecaller-germline-{}".format(capture_str)
-            self.add(vep_haplotypecaller)
-            vepped_vcf = vep_haplotypecaller.output_vcf
-
-        self.set_germline_vcf(normal_capture, (haplotypecaller.output, vepped_vcf))
 
         strelka_germline = StrelkaGermline(input_bam=bam,
                           normalid=capture_str,
@@ -555,20 +542,30 @@ class ClinseqPipeline(PypedreamPipeline):
 
         self.add(strelka_germline)
 
+        merge_germline_vcfs = MergeVCF() 
+        merge_germline_vcfs.input_vcf_hc = haplotypecaller.output
+        merge_germline_vcfs.input_vcf_strelka = strelka_germline.output_filtered_vcf
+        merge_germline_vcfs.reference_genome = self.refdata['reference_genome']
+        merge_germline_vcfs.output_vcf = "{}/variants/{}-all.germline.vcf.gz".format(self.outdir, capture_str)
+        merge_germline_vcfs.jobname = "germline-vcf-merging/{}".format(capture_str)
+
+        self.add(merge_germline_vcfs)
+
+        vepped_vcf = None
+        if self.vep_data_is_available():
+            vep_germline_vcf = VEP()
+            vep_germline_vcf.input_vcf = merge_germline_vcfs.output_vcf
+            vep_germline_vcf.threads = self.maxcores
+            vep_germline_vcf.reference_sequence = self.refdata['reference_genome']
+            vep_germline_vcf.vep_dir = self.refdata['vep_dir']
+            vep_germline_vcf.output_vcf = "{}/variants/{}.all.germline.vep.vcf.gz".format(self.outdir, capture_str)
+            vep_germline_vcf.jobname = "vep-merged-germline-vcf-{}".format(capture_str)
+            self.add(vep_germline_vcf)
+            vepped_vcf = vep_germline_vcf.output_vcf
+
+        self.set_germline_vcf(normal_capture, (merge_germline_vcfs.output_vcf, vepped_vcf))
+    
         
-        # if self.vep_data_is_available():
-        #     vep_strelka_germline = VEP()
-        #     vep_strelka_germline.input_vcf = strelka_germline.output_dir+"/results/variants/variants.vcf.gz"
-        #     vep_strelka_germline.threads = self.maxcores
-        #     vep_strelka_germline.reference_sequence = self.refdata['reference_genome']
-        #     vep_strelka_germline.vep_dir = self.refdata['vep_dir']
-        #     vep_strelka_germline.output_vcf = "{}/variants/{}.strelka-germline.vep.vcf.gz".format(self.outdir, capture_str)
-        #     vep_strelka_germline.jobname = "vep-strelka-germline-{}".format(capture_str)
-        #     self.add(vep_strelka_germline)
-        #     vepped_vcf = vep_strelka_germline.output_vcf
-
-        # self.set_germline_vcf(normal_capture, (strelka_germline.output_dir+"/results/variants/variants.vcf.gz", vepped_vcf))
-
     def configure_panel_analysis_with_normal(self, normal_capture):
         """
         Configure panel analyses focused on a specific unique normal library capture.
@@ -837,7 +834,7 @@ class ClinseqPipeline(PypedreamPipeline):
         vep.vep_dir = self.refdata['vep_dir']
         vep.output_vcf = "{}/variants/{}-{}.all.somatic.vep.vcf.gz".format(
             self.outdir, cancer_capture_str, normal_capture_str)
-        vep.jobname = "vep-vardict-somatic/{}".format(cancer_capture_str)
+        vep.jobname = "vep-merged-somatic-vcf/{}".format(cancer_capture_str)
         vep.additional_options = self.get_job_param("vep-additional-options")
         self.add(vep)
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].vepped_vcf = \

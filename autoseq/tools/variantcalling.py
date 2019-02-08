@@ -27,6 +27,36 @@ class HaplotypeCaller(Job):
 
         return haplotypecaller_cmd
 
+class StrelkaGermline(Job):
+    def __init__(self, input_bam=None, normalid=None, reference_sequence=None,
+                 target_bed=None, output_dir=None, output_filtered_vcf=None ):
+        Job.__init__(self)
+        self.input_bam = input_bam
+        self.normalid = normalid
+        self.reference_sequence = reference_sequence
+        self.target_bed = target_bed
+        self.output_dir = output_dir
+        self.output_filtered_vcf = output_filtered_vcf
+        
+    def command(self):
+        required("", self.input_bam)
+        required("", self.reference_sequence)
+
+        # configuration
+        configure_strelkagermline = "configureStrelkaGermlineWorkflow.py " + \
+                                    " --bam " + self.input_bam + \
+                                    " --ref " +  self.reference_sequence + \
+                                    " --targeted --callRegions " + self.target_bed + \
+                                    " --runDir " + self.output_dir
+        cmd = configure_strelkagermline + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
+
+        filter_passed_variants = "zcat " + self.output_dir + "/results/variants/variants.vcf.gz" + \
+                                " | awk 'BEGIN { OFS = \"\\t\"} /^#/ { print $0 } {if($7==\"PASS\") print $0 }' " + \
+                                " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_filtered_vcf)
+        
+        return " && ".join([cmd, filter_passed_variants])
+
+
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None,
@@ -117,34 +147,6 @@ class StrelkaSomatic(Job):
 
         return " && ".join([cmd, filter_pass_snvs, filter_pass_indels])
 
-class StrelkaGermline(Job):
-    def __init__(self, input_bam=None, normalid=None, reference_sequence=None,
-                 target_bed=None, output_dir=None, output_filtered_vcf=None ):
-        Job.__init__(self)
-        self.input_bam = input_bam
-        self.normalid = normalid
-        self.reference_sequence = reference_sequence
-        self.target_bed = target_bed
-        self.output_dir = output_dir
-        self.output_filtered_vcf = output_filtered_vcf
-        
-    def command(self):
-        required("", self.input_bam)
-        required("", self.reference_sequence)
-
-        # configuration
-        configure_strelkagermline = "configureStrelkaGermlineWorkflow.py " + \
-                                    " --bam " + self.input_bam + \
-                                    " --ref " +  self.reference_sequence + \
-                                    " --targeted --callRegions " + self.target_bed + \
-                                    " --runDir " + self.output_dir
-        cmd = configure_strelkagermline + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
-
-        filter_passed_variants = "zcat " + self.output_dir + "/results/variants/variants.vcf.gz" + \
-                                " | awk 'BEGIN { OFS = \"\\t\"} /^#/ { print $0 } {if($7==\"PASS\") print $0 }' " + \
-                                " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_filtered_vcf)
-        
-        return " && ".join([cmd, filter_passed_variants])
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -203,7 +205,9 @@ class Mutect2Somatic(Job):
                                 " --contamination-table " + self.tumor_calculatecontamination_table + \
                                 " -O "  + self.output_filtered
 
-        return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls])
+        rm_intermediate = "rm {} {}".format(self.tumor_getpileupsummaries_table, self.tumor_calculatecontamination_table)
+
+        return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls, rm_intermediate])
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -235,12 +239,6 @@ class Varscan2Somatic(Job):
                       " --output-indel " + self.output_indel + \
                       " --min-coverage 3 --min-var-freq 0.02 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 0" + \
                       " --output-vcf 1" 
-
-        # bgzip_index = "bgzip "+ self.output_snv +" && bgzip " + self.output_indel + " && bcftools index " + self.output_snv + \
-        #               ".gz && bcftools index " + self.output_indel + ".gz "
-
-        # vcf_concat = "bcftools concat -a " + self.output_snv +".gz " + self.output_indel + ".gz | bcftools sort -O v " + \
-        #               " -o " + self.output_all
 
         somatic_filter = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_indel + \
                         " && java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_snv 
@@ -423,6 +421,30 @@ class VcfFilter(Job):
                required("-f ", self.filter) + \
                "| bgzip " + required(" > ", self.output) + \
                " && tabix -p vcf {output}".format(output=self.output)
+
+class MergeVCF(Job):
+  def __init__(self):
+    Job.__init__(self)
+    self.input_vcf_hc = None
+    self.input_vcf_strelka = None
+    self.output_vcf = None
+    self.reference_genome = None
+
+  def command(self):
+
+    merge_vcf = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                " -T CombineVariants " + \
+                " -R " + self.reference_genome + \
+                " --variant:haplotypecaller " + self.input_vcf_hc + \
+                " --variant:strelka " + self.input_vcf_strelka + \
+                " -genotypeMergeOptions UNIQUIFY " + \
+                " | bgzip > {} ".format(self.output_vcf)
+
+    tabix_vcf = "tabix -p vcf {}".format(self.output_vcf)
+
+    return " && ".join([merge_vcf, tabix_vcf])
+
+
 
 class CurlSplitAndLeftAlign(Job):
     def __init__(self):
