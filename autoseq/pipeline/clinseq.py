@@ -590,14 +590,15 @@ class ClinseqPipeline(PypedreamPipeline):
 
         sample_str = compose_lib_capture_str(unique_capture)
 
-        make_cnvkit_tracks = MakeCNVkitTracks()
-        make_cnvkit_tracks.input_cnr = input_cnr
-        make_cnvkit_tracks.input_cns = input_cns
-        make_cnvkit_tracks.output_profile_bedgraph = "{}/cnv/{}_profile.bedGraph".format(
-            self.outdir, sample_str)
-        make_cnvkit_tracks.output_segments_bedgraph = "{}/cnv/{}_segments.bedGraph".format(
-            self.outdir, sample_str)
-        self.add(make_cnvkit_tracks)
+        if input_cnr:
+            make_cnvkit_tracks = MakeCNVkitTracks()
+            make_cnvkit_tracks.input_cnr = input_cnr
+            make_cnvkit_tracks.input_cns = input_cns
+            make_cnvkit_tracks.output_profile_bedgraph = "{}/cnv/{}_profile.bedGraph".format(
+                self.outdir, sample_str)
+            make_cnvkit_tracks.output_segments_bedgraph = "{}/cnv/{}_segments.bedGraph".format(
+                self.outdir, sample_str)
+            self.add(make_cnvkit_tracks)
 
     def configure_fix_cnvkit(self, unique_capture, cnr, cns, cnvkit_fix_filename):
         """
@@ -652,34 +653,36 @@ class ClinseqPipeline(PypedreamPipeline):
         except KeyError:
             pass
 
-        if not cnvkit.reference:
-            cnvkit.targets_bed = self.refdata['targets'][capture_kit_name]['targets-bed-slopped20']
-            cnvkit.fasta = self.refdata["reference_genome"]
+        # if not cnvkit.reference:
+        #     cnvkit.targets_bed = self.refdata['targets'][capture_kit_name]['targets-bed-slopped20']
+        #     cnvkit.fasta = self.refdata["reference_genome"]
+        if cnvkit.reference: 
 
-        cnvkit.jobname = "cnvkit/{}".format(sample_str)
+            cnvkit.jobname = "cnvkit/{}".format(sample_str)
 
-        # Register the result of this analysis:
-        self.set_capture_cnr(unique_capture, cnvkit.output_cnr)
-        self.set_capture_cns(unique_capture, cnvkit.output_cns)
+            # Register the result of this analysis:
+            self.set_capture_cnr(unique_capture, cnvkit.output_cnr)
+            self.set_capture_cns(unique_capture, cnvkit.output_cns)
 
-        # FIXME: This extra step (fixing the cnv kit output) should perhaps go elsewhere.
-        try:
-            # Only fix the CNV-kit output if the required file is available:
-            cnvkit_fix_filename = \
-                self.refdata['targets'][capture_kit_name]["cnvkit-fix"][library_kit_name][sample_type]
-            self.configure_fix_cnvkit(unique_capture, cnvkit.output_cnr, cnvkit.output_cns, cnvkit_fix_filename)
-        except KeyError:
-            pass
+            # FIXME: This extra step (fixing the cnv kit output) should perhaps go elsewhere.
+            try:
+                # Only fix the CNV-kit output if the required file is available:
+                cnvkit_fix_filename = \
+                    self.refdata['targets'][capture_kit_name]["cnvkit-fix"][library_kit_name][sample_type]
+                self.configure_fix_cnvkit(unique_capture, cnvkit.output_cnr, cnvkit.output_cns, cnvkit_fix_filename)
+            except KeyError:
+                pass
 
-        self.add(cnvkit)
 
-        # Configure conversion of CNV kit output to seg format:
-        seg_filename = "{}/cnv/{}.seg".format(
-            self.outdir, sample_str)
-        cns2seg = Cns2Seg(self.capture_to_results[unique_capture].cns, seg_filename)
-        self.add(cns2seg)
+            self.add(cnvkit)
 
-        self.set_capture_seg(unique_capture, cns2seg.output_seg)
+            # Configure conversion of CNV kit output to seg format:
+            seg_filename = "{}/cnv/{}.seg".format(
+                self.outdir, sample_str)
+            cns2seg = Cns2Seg(self.capture_to_results[unique_capture].cns, seg_filename)
+            self.add(cns2seg)
+
+            self.set_capture_seg(unique_capture, cns2seg.output_seg)
 
     def configure_lowpass_analyses(self):
         """
