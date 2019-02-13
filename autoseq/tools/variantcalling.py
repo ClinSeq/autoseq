@@ -211,7 +211,8 @@ class Mutect2Somatic(Job):
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, normal_pileup=None, tumor_pileup=None, output_snv=None, output_indel=None):
+                 target_bed=None, normal_pileup=None, tumor_pileup=None, output_snv=None, output_indel=None,
+                 output_somatic_snv=None, output_somatic_indel=None):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -223,6 +224,8 @@ class Varscan2Somatic(Job):
         self.tumor_pileup = tumor_pileup
         self.output_indel = output_indel
         self.output_snv = output_snv
+        self.output_somatic_snv = output_somatic_snv
+        self.output_somatic_indel = output_somatic_indel
         
     def command(self):
         required("", self.input_tumor)
@@ -572,11 +575,13 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                             normal_pileup="{}/variants/varscan/{}.pileup".format(outdir, normal_capture_str),
                             tumor_pileup="{}/variants/varscan/{}.pileup".format(outdir, cancer_capture_str),   
                             output_snv="{}/variants/varscan/{}-{}-varscan.snp.vcf".format(outdir, normal_capture_str, cancer_capture_str) ,
-                            output_indel="{}/variants/varscan/{}-{}-varscan.indel.vcf".format(outdir, normal_capture_str, cancer_capture_str) 
+                            output_indel="{}/variants/varscan/{}-{}-varscan.indel.vcf".format(outdir, normal_capture_str, cancer_capture_str),
+                            output_somatic_snv="{}/variants/varscan/{}-{}-varscan.snp.Somatic.vcf".format(outdir, normal_capture_str, cancer_capture_str),
+                            output_somatic_indel="{}/variants/varscan/{}-{}-varscan.indel.Somatic.vcf".format(outdir, normal_capture_str, cancer_capture_str),
                             )
         varscan_somatic.jobname = "varscan-somatic/{}".format(cancer_capture_str)
         pipeline.add(varscan_somatic)
-        d['varscan_snv'] = varscan_somatic.output_snv[:-3] + "Somatic.vcf"
-        d['varscan_indel'] = varscan_somatic.output_indel[:-3] + "Somatic.vcf"   
+        d['varscan_snv'] = varscan_somatic.output_somatic_snv
+        d['varscan_indel'] = varscan_somatic.output_somatic_indel
 
     return d
