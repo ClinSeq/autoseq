@@ -833,7 +833,7 @@ class ClinseqPipeline(PypedreamPipeline):
         vep.reference_sequence = self.refdata['reference_genome']
         vep.vep_dir = self.refdata['vep_dir']
         vep.output_vcf = "{}/variants/{}-{}.all.somatic.vep.vcf.gz".format(
-            self.outdir, cancer_capture_str, normal_capture_str)
+            self.outdir, normal_capture_str, cancer_capture_str)
         vep.jobname = "vep-merged-somatic-vcf/{}".format(cancer_capture_str)
         vep.additional_options = self.get_job_param("vep-additional-options")
         self.add(vep)

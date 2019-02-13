@@ -120,7 +120,7 @@ class LiqBioPipeline(ClinseqPipeline):
         manta_sv.normalid = normal_capture_str
         manta_sv.reference_sequence = self.refdata["reference_genome"]
         manta_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
-        manta_sv.output_dir = "{}/variants/{}-{}-manta-somatic".format(self.outdir, cancer_capture_str, normal_capture_str)
+        manta_sv.output_dir = "{}/variants/{}-{}-manta-somatic".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(manta_sv)
 

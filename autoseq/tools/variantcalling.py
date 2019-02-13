@@ -540,9 +540,9 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           reference_sequence=pipeline.refdata['reference_genome'],
                           input_indel_candidates="{}/variants/{}-{}-manta-somatic".format(outdir, cancer_capture_str, normal_capture_str),
                           target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],
-                          output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, cancer_capture_str, normal_capture_str),
-                          output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
-                          output_indels_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.indels.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
+                          output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, normal_capture_str, cancer_capture_str),
+                          output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
+                          output_indels_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.indels.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
                           )
         strelka_somatic.jobname = "strelka-somatic-workflow/{}".format(cancer_capture_str)
         pipeline.add(strelka_somatic)
@@ -553,13 +553,13 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         mutect_somatic = Mutect2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
                           normalid=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
-                          output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
-                          bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, cancer_capture_str, normal_capture_str),
+                          output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
+                          bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, normal_capture_str, cancer_capture_str),
                           exac=pipeline.refdata['exac'] ,
                           interval_list=pipeline.refdata['targets'][capture_name]['targets-interval_list-slopped20'],
                           tumor_getpileupsummaries_table= "{}/variants/mutect/{}-mutect-tumor-pileupsummary-table".format(outdir, cancer_capture_str),
                           tumor_calculatecontamination_table= "{}/variants/mutect/{}-mutect-tumor-contamination-table".format(outdir, cancer_capture_str),
-                          output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str)
+                          output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str)
                           )
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
         pipeline.add(mutect_somatic)

@@ -17,7 +17,7 @@ class FastqToBam(Job):
 
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g --tmp-dir {} ".format(tmpdir) + \
+		cmd = "fgbio --tmp-dir {} ".format(tmpdir) + \
 			" FastqToBam " + \
 			" -i {}  {} ".format(self.input_fastq1, self.input_fastq2)  + \
 			" -o " + self.output_bam + \
@@ -67,7 +67,7 @@ class GroupReadsByUmi(Job):
 
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:ParallelGCThreads=4 --tmp-dir {} GroupReadsByUmi ".format(tmpdir) + \
+		cmd = "fgbio --tmp-dir {} GroupReadsByUmi ".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
 			  " --strategy paired --family-size-histogram " + self.output_histogram
@@ -85,7 +85,7 @@ class CallDuplexConsensusReads(Job):
 	def command(self):
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:ParallelGCThreads=4 --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
+		cmd = "fgbio --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
 			  " --min-reads 2 1 0 --min-input-base-quality 30 "
@@ -105,7 +105,7 @@ class FilterConsensusReads(Job):
 	def command(self):
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g --tmp-dir {} FilterConsensusReads".format(tmpdir) + \
+		cmd = "fgbio --tmp-dir {} FilterConsensusReads".format(tmpdir) + \
 		      " -i {}".format(self.input_bam) + \
 		      " -o " + self.output_bam + \
 		      " --ref " + self.reference_genome + \
