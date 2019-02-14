@@ -119,6 +119,7 @@ class Realignment(Job):
                             " -targetIntervals " + self.target_intervals + \
                             " -known " + self.known_indel1 + \
                             " -known " + self.known_indel2 + \
+                            " -allowPotentiallyMisencodedQuals " + \
                             " -I " + self.input_bam + \
                             " -o " + self.output_bam
 

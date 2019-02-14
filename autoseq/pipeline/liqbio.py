@@ -201,9 +201,12 @@ class LiqBioPipeline(ClinseqPipeline):
             filtered_bam = self.configure_consensus_read_filter(bam=realigned_bam2 ,
                                                     clinseq_barcode=clinseq_barcode,
                                                     capture_kit=capture_kit)
+            clip_overlap_bam = self.configure_clip_overlapping(bam=filtered_bam,
+                                                    clinseq_barcode=clinseq_barcode,
+                                                    capture_kit=capture_kit)
             mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
 
-            self.set_capture_bam(unique_capture, filtered_bam, self.umi)
+            self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
 
 
 
@@ -211,7 +214,7 @@ class LiqBioPipeline(ClinseqPipeline):
         # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
         align_unmap_bam = AlignUnmappedBam()
         align_unmap_bam.input_bam = bamfile
-        align_unmap_bam.reference_genome = self.refdata['reference_genome']
+        align_unmap_bam.reference_genome = self.refdata['bwaIndex']
         align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
@@ -272,6 +275,17 @@ class LiqBioPipeline(ClinseqPipeline):
         self.add(filter_con_reads)
 
         return filter_con_reads.output_bam
+
+    def configure_clip_overlapping(self, bam, clinseq_barcode, capture_kit):
+
+        clip_overlap_reads = ClipBam()
+        clip_overlap_reads.input_bam = bam
+        clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        clip_overlap_reads.output_metrics = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
+        clip_overlap_reads.reference_genome = self.refdata['reference_genome']
+        self.add(clip_overlap_reads)
+
+        return clip_overlap_reads.output_bam
 
 
 
