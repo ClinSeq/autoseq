@@ -107,6 +107,7 @@ class Realignment(Job):
                             " -T RealignerTargetCreator " + \
                             " -R " + self.reference_genome + \
                             " -known " + self.known_indel1 + \
+			    " -allowPotentiallyMisencodedQuals " + \
                             " -known " + self.known_indel2 + \
                             " -I " + self.input_bam + \
                             " -o " + self.target_intervals 

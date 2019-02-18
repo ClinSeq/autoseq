@@ -541,7 +541,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
                           normalid=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
-                          input_indel_candidates="{}/variants/{}-{}-manta-somatic".format(outdir, cancer_capture_str, normal_capture_str),
+                          input_indel_candidates="{}/variants/{}-{}-manta-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],
                           output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
