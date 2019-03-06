@@ -189,25 +189,31 @@ class Mutect2Somatic(Job):
         
         # Estimate cross-sample contamination using GetPileupSummaries and CalculateContamination.
         # Run GetPileupSummaries on the tumor BAM to summarize read support for a set number of known variant sites.
-        mutect_getpileup_sum = "gatk GetPileupSummaries " + \
-                                  " -I " + self.input_tumor + \
-                                  " -V " + self.exac_genome_vcf + \
-                                  " -O " + self.tumor_getpileupsummaries_table
+        # mutect_getpileup_sum = "gatk --java-options '-Xmx10g' GetPileupSummaries " + \
+        #                           " -I " + self.input_tumor + \
+        #                           " -L " + self.interval_list + \
+        #                           " -V " + self.exac_genome_vcf + \
+        #                           " -O " + self.tumor_getpileupsummaries_table
 
-        # Estimate contamination with CalculateContamination.
-        mutect_cal_contamination = "gatk CalculateContamination " + \
-                                      " -I " + self.tumor_getpileupsummaries_table + \
-                                      " -O " + self.tumor_calculatecontamination_table 
+        # # Estimate contamination with CalculateContamination.
+        # mutect_cal_contamination = "gatk --java-options '-Xmx10g' CalculateContamination " + \
+        #                               " -I " + self.tumor_getpileupsummaries_table + \
+        #                               " -O " + self.tumor_calculatecontamination_table 
 
         # Filter for confident somatic calls using FilterMutectCalls 
-        filter_mutect_calls = "gatk FilterMutectCalls " + \
+        # filter_mutect_calls = "gatk --java-options '-Xmx10g' FilterMutectCalls " + \
+        #                         " -V " + self.output + \
+        #                         " --contamination-table " + self.tumor_calculatecontamination_table + \
+        #                         " -O "  + self.output_filtered
+
+        filter_mutect_calls = "gatk --java-options '-Xmx10g' FilterMutectCalls " + \
                                 " -V " + self.output + \
-                                " --contamination-table " + self.tumor_calculatecontamination_table + \
                                 " -O "  + self.output_filtered
 
-        rm_intermediate = "rm {} {}".format(self.tumor_getpileupsummaries_table, self.tumor_calculatecontamination_table)
+        # rm_intermediate = "rm {} {}".format(self.tumor_getpileupsummaries_table, self.tumor_calculatecontamination_table)
 
-        return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls, rm_intermediate])
+        # return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls, rm_intermediate])
+        return " && ".join([mutectsomatic_cmd, filter_mutect_calls])
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -237,14 +243,14 @@ class Varscan2Somatic(Job):
         normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.normal_pileup 
         tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.tumor_pileup 
 
-        varscan_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar somatic " + self.normal_pileup + " " + self.tumor_pileup + \
+        varscan_cmd = "varscan --java-options '-Xmx10g' somatic " + self.normal_pileup + " " + self.tumor_pileup + \
                       " --output-snp " + self.output_snv + \
                       " --output-indel " + self.output_indel + \
                       " --min-coverage 3 --min-var-freq 0.02 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 0" + \
                       " --output-vcf 1" 
 
-        somatic_filter = "java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_indel + \
-                        " && java -jar /nfs/ALASCCA/autoseq-scripts/VarScan.v2.4.3.jar processSomatic " + self.output_snv 
+        somatic_filter = "varscan --java-options '-Xmx10g' processSomatic " + self.output_indel + \
+                        " && varscan --java-options '-Xmx10g' processSomatic " + self.output_snv 
 
         return " && ".join([normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, somatic_filter])
 
@@ -343,9 +349,9 @@ class SomaticSeq(Job):
                 " --assumeIdenticalSamples " + \
                 " | bgzip > " + self.output_vcf 
     
-    vcf_tabix = "tabix -p vcf " + self.output_vcf
-    
-    return " && ".join([somatic_seq_env, somatic_seq, deactivate_ssenv, merge_vcf, vcf_tabix])
+    tabix_vcf = "tabix -p vcf {} ".format(self.output_vcf)
+
+    return " && ".join([somatic_seq_env, somatic_seq, deactivate_ssenv, merge_vcf, tabix_vcf])
 
 class VEP(Job):
     def __init__(self):
@@ -354,25 +360,25 @@ class VEP(Job):
         self.output_vcf = None
         self.reference_sequence = None
         self.vep_dir = None
+        self.brca_exchange_vcf = None
         self.jobname = "vep"
         self.additional_options = ""
 
     def command(self):
-        bgzip = ""
+        
         fork = ""
         if self.threads > 1:  # vep does not accept "--fork 1", so need to check.
             fork = " --fork {} ".format(self.threads)
-        if self.output_vcf.endswith('gz'):
-            bgzip = " | bgzip "
 
-        cmdstr = "variant_effect_predictor.pl --vcf --output_file STDOUT " + \
+        cmdstr = "vep --vcf --output_file STDOUT " + \
                  self.additional_options + required("--dir ", self.vep_dir) + \
                  required("--fasta ", self.reference_sequence) + \
                  required("-i ", self.input_vcf) + \
                  " --check_existing  --total_length --allele_number " + \
                  " --no_escape --no_stats --everything --offline " + \
-                 fork + bgzip + " > " + required("", self.output_vcf) + \
-                 " && tabix -p vcf {}".format(self.output_vcf)
+                 " --custom {},,vcf,exact,0,ClinicalSignificance ".format(self.brca_exchange_vcf) + \
+                 fork + " > " + required("", self.output_vcf) 
+                 # " && tabix -p vcf {}".format(self.output_vcf)
 
         return cmdstr
 
@@ -442,11 +448,22 @@ class MergeVCF(Job):
                 " --variant:strelka " + self.input_vcf_strelka + \
                 " -genotypeMergeOptions UNIQUIFY " + \
                 " | bgzip > {} ".format(self.output_vcf)
-
-    tabix_vcf = "tabix -p vcf {}".format(self.output_vcf)
+    
+    tabix_vcf = "tabix -p vcf {} ".format(self.output_vcf)
 
     return " && ".join([merge_vcf, tabix_vcf])
 
+class GenerateIGVNavInput(Job):
+  def __init__(self):
+    Job.__init__(self)
+    self.input_vcf = None
+    self.oncokb_db = None
+    self.output = None
+    self.vcftype = None
+
+  def command(self):
+
+    return "generateIGVnavInput.py {} {} {} --output {}".format(self.input_vcf, self.oncokb_db, self.vcftype, self.output)
 
 
 class CurlSplitAndLeftAlign(Job):

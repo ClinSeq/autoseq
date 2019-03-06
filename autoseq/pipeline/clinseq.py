@@ -8,7 +8,7 @@ from autoseq.util.library import find_fastqs
 from autoseq.tools.picard import PicardCollectInsertSizeMetrics, PicardCollectOxoGMetrics, \
     PicardMergeSamFiles, PicardMarkDuplicates, PicardCollectHsMetrics, PicardCollectWgsMetrics
 from autoseq.tools.variantcalling import HaplotypeCaller, VEP, VcfAddSample, VarDictForPureCN, \
-    call_somatic_variants, StrelkaGermline, SomaticSeq , MergeVCF
+    call_somatic_variants, StrelkaGermline, SomaticSeq , MergeVCF, GenerateIGVNavInput
 from autoseq.tools.msi import MsiSensor, Msings
 from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateContestVCFs
 from autoseq.tools.qc import *
@@ -558,10 +558,20 @@ class ClinseqPipeline(PypedreamPipeline):
             vep_germline_vcf.threads = self.maxcores
             vep_germline_vcf.reference_sequence = self.refdata['reference_genome']
             vep_germline_vcf.vep_dir = self.refdata['vep_dir']
-            vep_germline_vcf.output_vcf = "{}/variants/{}.all.germline.vep.vcf.gz".format(self.outdir, capture_str)
+            vep_germline_vcf.brca_exchange_vcf = self.refdata['brca_exchange']
+            vep_germline_vcf.output_vcf = "{}/variants/{}.all.germline.vep.vcf".format(self.outdir, capture_str)
             vep_germline_vcf.jobname = "vep-merged-germline-vcf-{}".format(capture_str)
             self.add(vep_germline_vcf)
             vepped_vcf = vep_germline_vcf.output_vcf
+
+        generate_igvnav_input = GenerateIGVNavInput()
+        generate_igvnav_input.input_vcf = vep_germline_vcf.output_vcf
+        generate_igvnav_input.oncokb_db = self.refdata['oncokb']
+        generate_igvnav_input.vcftype = "germline"
+        generate_igvnav_input.output = "{}/{}-igvnav-input.txt".format(self.outdir, capture_str)
+        generate_igvnav_input.jobname = "IGVNavInput-file-generation-{}".format(capture_str) 
+
+        self.add(generate_igvnav_input)
 
         self.set_germline_vcf(normal_capture, (merge_germline_vcfs.output_vcf, vepped_vcf))
     
@@ -821,6 +831,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].somatic_vcf = \
             somatic_seq.output_vcf
 
+
     def configure_vep(self, normal_capture, cancer_capture):
         if not self.vep_data_is_available():
             raise ValueError("Invalid call to configure_vep: No vep data available.")
@@ -835,13 +846,23 @@ class ClinseqPipeline(PypedreamPipeline):
         vep.threads = self.maxcores
         vep.reference_sequence = self.refdata['reference_genome']
         vep.vep_dir = self.refdata['vep_dir']
-        vep.output_vcf = "{}/variants/{}-{}.all.somatic.vep.vcf.gz".format(
+        vep.brca_exchange_vcf = self.refdata['brca_exchange']
+        vep.output_vcf = "{}/variants/{}-{}.all.somatic.vep.vcf".format(
             self.outdir, normal_capture_str, cancer_capture_str)
         vep.jobname = "vep-merged-somatic-vcf/{}".format(cancer_capture_str)
         vep.additional_options = self.get_job_param("vep-additional-options")
         self.add(vep)
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].vepped_vcf = \
             vep.output_vcf
+
+        generate_igvnav_input = GenerateIGVNavInput()
+        generate_igvnav_input.input_vcf = vep.output_vcf
+        generate_igvnav_input.oncokb_db = self.refdata['oncokb']
+        generate_igvnav_input.vcftype = "somatic"
+        generate_igvnav_input.output = "{}/{}-{}-igvnav-input.txt".format(self.outdir, normal_capture_str, cancer_capture_str)
+        generate_igvnav_input.jobname = "IGVNavInput-file-generation-{}-{}".format(normal_capture_str, cancer_capture_str) 
+
+        self.add(generate_igvnav_input)
 
     def configure_make_allelic_fraction_track(self, normal_capture, cancer_capture):
         """

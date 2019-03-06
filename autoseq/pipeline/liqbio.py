@@ -71,22 +71,22 @@ class LiqBioPipeline(ClinseqPipeline):
 
             self.set_capture_svs(unique_capture, event_type, (svcaller.output_bam, svcaller.output_gtf))
 
-        # # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
-        # # getting "pushed too far" in it's usage:
-        # sveffect = Sveffect()
-        # sveffect.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
-        # sveffect.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
-        # sveffect.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
-        # sveffect.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
-        # sveffect.ts_regions = self.refdata["ts_regions"]
-        # sveffect.ar_regions = self.refdata["ar_regions"]
-        # sveffect.fusion_regions = self.refdata["fusion_regions"]
-        # sveffect.output_combined_bed = "{}/svs/{}_combined.bed".format(self.outdir, sample_str)
-        # sveffect.output_effects_json = "{}/svs/{}_effects.json".format(self.outdir, sample_str)
+        # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
+        # getting "pushed too far" in it's usage:
+        sveffect = Sveffect()
+        sveffect.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
+        sveffect.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
+        sveffect.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
+        sveffect.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
+        sveffect.ts_regions = self.refdata["ts_regions"]
+        sveffect.ar_regions = self.refdata["ar_regions"]
+        sveffect.fusion_regions = self.refdata["fusion_regions"]
+        sveffect.output_combined_bed = "{}/svs/{}_combined.bed".format(self.outdir, sample_str)
+        sveffect.output_effects_json = "{}/svs/{}_effects.json".format(self.outdir, sample_str)
 
-        # self.add(sveffect)
+        self.add(sveffect)
 
-        # self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
+        self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
 
     def configure_panel_analyses_liqbio(self):
         # Configure liqbio analyses to be run on all unique panel captures individually:
