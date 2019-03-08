@@ -805,7 +805,7 @@ class ClinseqPipeline(PypedreamPipeline):
             self, cancer_bam=cancer_bam, normal_bam=normal_bam,
             cancer_capture=cancer_capture, normal_capture=normal_capture,
             target_name=target_name,
-            outdir=self.outdir, callers=['vardict','strelka','manta','mutect2','varscan'],
+            outdir=self.outdir, callers=['vardict','strelka','mutect2','varscan'],
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
             min_num_reads=self.get_job_param('vardict-min-num-reads'))
 
@@ -1168,8 +1168,8 @@ class ClinseqPipeline(PypedreamPipeline):
         self.configure_somatic_calling(normal_capture, cancer_capture)
         if self.vep_data_is_available():
             self.configure_vep(normal_capture, cancer_capture)
-        self.configure_vcf_add_sample(normal_capture, cancer_capture)
-        self.configure_make_allelic_fraction_track(normal_capture, cancer_capture)
+        # self.configure_vcf_add_sample(normal_capture, cancer_capture)
+        # self.configure_make_allelic_fraction_track(normal_capture, cancer_capture)
         self.configure_msi_sensor(normal_capture, cancer_capture)
         #self.configure_hz_conc(normal_capture, cancer_capture)
         self.configure_contamination_estimate(normal_capture, cancer_capture)

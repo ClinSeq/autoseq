@@ -243,14 +243,14 @@ class Varscan2Somatic(Job):
         normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.normal_pileup 
         tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.tumor_pileup 
 
-        varscan_cmd = "varscan --java-options '-Xmx10g' somatic " + self.normal_pileup + " " + self.tumor_pileup + \
+        varscan_cmd = "varscan -Xmx10g somatic " + self.normal_pileup + " " + self.tumor_pileup + \
                       " --output-snp " + self.output_snv + \
                       " --output-indel " + self.output_indel + \
                       " --min-coverage 3 --min-var-freq 0.02 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 0" + \
                       " --output-vcf 1" 
 
-        somatic_filter = "varscan --java-options '-Xmx10g' processSomatic " + self.output_indel + \
-                        " && varscan --java-options '-Xmx10g' processSomatic " + self.output_snv 
+        somatic_filter = "varscan -Xmx10g processSomatic " + self.output_indel + \
+                        " && varscan -Xmx10g processSomatic " + self.output_snv 
 
         return " && ".join([normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, somatic_filter])
 
@@ -326,7 +326,7 @@ class SomaticSeq(Job):
 
     somatic_seq_env = "source activate somaticseqenv"
 
-    somatic_seq = "somaticseq/somaticseq/run_somaticseq.py " + \
+    somatic_seq = "run_somaticseq.py " + \
                   " --output-directory " + self.output_dir + \
                   " --genome-reference " + self.reference_sequence +  \
                   " paired " + \
