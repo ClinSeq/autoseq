@@ -437,7 +437,6 @@ class ClinseqPipeline(PypedreamPipeline):
         # Configure duplicate marking:
         self.configure_markdups(realignment.output_bam , unique_capture)
         
-
     def configure_markdups(self, bamfile, unique_capture):
 
         capture_str = compose_lib_capture_str(unique_capture)
@@ -461,7 +460,6 @@ class ClinseqPipeline(PypedreamPipeline):
         self.set_capture_bam(unique_capture, markdups.output_bam, umi=False)
 
         self.qc_files.append(markdups.output_metrics)
-
 
     def configure_fastq_qcs(self):
         """
@@ -532,7 +530,7 @@ class ClinseqPipeline(PypedreamPipeline):
 
 
         strelka_germline = StrelkaGermline(input_bam=bam,
-                          normalid=capture_str,
+                          normal_id=capture_str,
                           reference_sequence=self.refdata['reference_genome'],
                           output_dir="{}/variants/{}-strelka-germline".format(self.outdir, capture_str),
                           target_bed=self.refdata['targets'][targets]['targets-bed-slopped20'] ,
@@ -574,8 +572,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.add(generate_igvnav_input)
 
         self.set_germline_vcf(normal_capture, (merge_germline_vcfs.output_vcf, vepped_vcf))
-    
-        
+            
     def configure_panel_analysis_with_normal(self, normal_capture):
         """
         Configure panel analyses focused on a specific unique normal library capture.
@@ -830,7 +827,6 @@ class ClinseqPipeline(PypedreamPipeline):
 
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].somatic_vcf = \
             somatic_seq.output_vcf
-
 
     def configure_vep(self, normal_capture, cancer_capture):
         if not self.vep_data_is_available():

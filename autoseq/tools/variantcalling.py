@@ -28,11 +28,11 @@ class HaplotypeCaller(Job):
         return haplotypecaller_cmd
 
 class StrelkaGermline(Job):
-    def __init__(self, input_bam=None, normalid=None, reference_sequence=None,
+    def __init__(self, input_bam=None, normal_id=None, reference_sequence=None,
                  target_bed=None, output_dir=None, output_filtered_vcf=None ):
         Job.__init__(self)
         self.input_bam = input_bam
-        self.normalid = normalid
+        self.normal_id = normal_id
         self.reference_sequence = reference_sequence
         self.target_bed = target_bed
         self.output_dir = output_dir
@@ -55,7 +55,6 @@ class StrelkaGermline(Job):
                                 " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_filtered_vcf)
         
         return " && ".join([cmd, filter_passed_variants])
-
 
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -107,14 +106,14 @@ class VarDict(Job):
         return cmd
 
 class StrelkaSomatic(Job):
-    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+    def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,
                  target_bed=None, input_indel_candidates=None ,output_dir=None, output_snvs_vcf=None, output_indels_vcf=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
         self.input_indel_candidates = input_indel_candidates
-        self.tumorid = tumorid
-        self.normalid = normalid
+        self.tumor_id = tumor_id
+        self.normal_id = normal_id
         self.reference_sequence = reference_sequence
         self.target_bed = target_bed
         self.output_dir = output_dir
@@ -147,16 +146,15 @@ class StrelkaSomatic(Job):
 
         return " && ".join([cmd, filter_pass_snvs, filter_pass_indels])
 
-
 class Mutect2Somatic(Job):
-    def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
+    def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,
                  target_bed=None, output=None, bamout=None, exac=None, interval_list=None, tumor_getpileupsummaries_table=None, 
                  tumor_calculatecontamination_table=None, output_filtered=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
-        self.tumorid = tumorid
-        self.normalid = normalid
+        self.tumor_id = tumor_id
+        self.normal_id = normal_id
         self.reference_sequence = reference_sequence
         self.target_bed = target_bed
         self.output = output
@@ -180,8 +178,8 @@ class Mutect2Somatic(Job):
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
                                     " -I " + self.input_normal + \
-                                    " -tumor " + self.tumorid + \
-                                    " -normal " + self.normalid + \
+                                    " -tumor " + self.tumor_id + \
+                                    " -normal " + self.normal_id + \
                                     " -L " + self.interval_list + \
                                     " --disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
                                     " -bamout " + self.bamout + \
@@ -462,9 +460,13 @@ class GenerateIGVNavInput(Job):
     self.vcftype = None
 
   def command(self):
+    """
+    Script to generate tab limited file from final vep annotated vcf file.(both somatic and germline)
+    This will annotate the oncogenecity also to final txt file
 
+    usage: generateIGVnavInput.py input.vcf oncokb_allVariants.txt vcftype(somatic or germline) --output ouput.vcf
+    """
     return "generateIGVnavInput.py {} {} {} --output {}".format(self.input_vcf, self.oncokb_db, self.vcftype, self.output)
-
 
 class CurlSplitAndLeftAlign(Job):
     def __init__(self):
@@ -496,7 +498,7 @@ class InstallVep(Job):
                " --species homo_sapiens --version 83_GRCh37"
 
 def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, normal_capture,
-                          target_name, outdir, callers=['vardict', 'strelka'],
+                          target_name, outdir, callers=['vardict','strelka','mutect2', 'varscan'],
                           min_alt_frac=0.1, min_num_reads=None):
     """
     Configuring calling of somatic variants on a given pairing of cancer and normal bam files,
@@ -555,10 +557,10 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
 
 
     if 'strelka' in callers:
-        strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
-                          normalid=normal_sample_str,
+        strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumor_id=tumor_sample_str,
+                          normal_id=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
-                          input_indel_candidates="{}/variants/{}-{}-manta-somatic".format(outdir, normal_capture_str, cancer_capture_str),
+                          input_indel_candidates="{}/svs/{}-{}-manta-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],
                           output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
@@ -570,8 +572,8 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         d['strelka_indels'] = strelka_somatic.output_snvs_vcf
 
     if 'mutect2' in callers:
-        mutect_somatic = Mutect2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumorid=tumor_sample_str,
-                          normalid=normal_sample_str,
+        mutect_somatic = Mutect2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumor_id=tumor_sample_str,
+                          normal_id=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
                           output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
                           bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, normal_capture_str, cancer_capture_str),

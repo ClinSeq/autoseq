@@ -66,5 +66,5 @@ class TestLiqbio(unittest.TestCase):
         mock_find_fastqs.return_value = ["test1.fq.gz", "test2.fq.gz"]
         mock_data_available_for_clinseq_barcode.return_value = True
         test_liqbio_pipeline = LiqBioPipeline(self.sample_data, self.ref_data, {}, "/tmp",
-                                              "/nfs/LIQBIO/INBOX/exomes")
+                                              "/nfs/LIQBIO/INBOX/exomes", 'FALSE')
         self.assertTrue(mock_configure_multi_qc.called)

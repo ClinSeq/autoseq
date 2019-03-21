@@ -43,7 +43,7 @@ class AlignUnmappedBam(Job):
 
 		bwa_cmd = "bwa mem -p -t 16 {} /dev/stdin ".format(self.reference_genome)
 
-		picard_merge_cmd = "picard -Xmx5g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
+		picard_merge_cmd = "picard -Xmx10g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
 							" O={} ".format(self.output_bam) + \
 							" R={} ".format(self.reference_genome) + \
 							" SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR CREATE_INDEX=true " + \
@@ -52,8 +52,6 @@ class AlignUnmappedBam(Job):
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
 
 		return " | ".join([picard_cmd, bwa_cmd, picard_merge_cmd]) + " && " + rm_tmpdir 
-
-
 
 class GroupReadsByUmi(Job):
 	def __init__(self):
@@ -94,7 +92,6 @@ class CallDuplexConsensusReads(Job):
 
 		return cmd + " && " + rm_tmpdir 
 
-
 class FilterConsensusReads(Job):
 	def __init__(self):
 		Job.__init__(self)
@@ -115,8 +112,7 @@ class FilterConsensusReads(Job):
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
 
 		return cmd + " && " + rm_tmpdir 
-
-    
+   
 class ClipBam(Job):
 	def __init__(self):
 		Job.__init__(self)
@@ -131,7 +127,7 @@ class ClipBam(Job):
 		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} ClipBam ".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
-			  " -m " + self.output_metrics + \
+			  " -m " + self.metrics_txt + \
 			  " --ref " + self.reference_genome + \
 			  " --clip-overlapping-reads true "
 

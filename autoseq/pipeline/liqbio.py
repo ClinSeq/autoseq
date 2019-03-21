@@ -124,7 +124,6 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.add(manta_sv)
 
-
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
         tumor_vs_normal_results = self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)]
         tumor_results = self.capture_to_results[cancer_capture]
@@ -170,7 +169,6 @@ class LiqBioPipeline(ClinseqPipeline):
         #     self.configure_purecn(normal_capture, cancer_capture)
         #     self.configure_liqbio_cna(normal_capture, cancer_capture)
 
-
     def configure_umi_processing(self):
         # configure for UMI SNV calling pipeline
         #
@@ -207,8 +205,6 @@ class LiqBioPipeline(ClinseqPipeline):
             mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
 
             self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
-
-
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
         # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
