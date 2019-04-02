@@ -2,14 +2,17 @@ from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
 from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV
+from autoseq.tools.umi import *
+from autoseq.tools.alignment import fq_trimming, Realignment
+from autoseq.util.library import find_fastqs
 
 __author__ = 'thowhi'
 
 
 class LiqBioPipeline(ClinseqPipeline):
-    def __init__(self, sampledata, refdata, job_params, outdir, libdir, maxcores=1, scratch="/scratch/tmp/tmp",
+    def __init__(self, sampledata, refdata, job_params, outdir, libdir, umi, maxcores=1, scratch="/scratch/tmp/tmp",
                  **kwargs):
-        ClinseqPipeline.__init__(self, sampledata, refdata, job_params, outdir, libdir,
+        ClinseqPipeline.__init__(self, sampledata, refdata, job_params, outdir, libdir, umi,
                                  maxcores, scratch, **kwargs)
 
         # Set the min alt frac value:
@@ -20,8 +23,12 @@ class LiqBioPipeline(ClinseqPipeline):
         # Remove clinseq barcodes for which data is not available:
         self.check_sampledata()
 
-        # Configure alignment and merging of fastq data for all clinseq barcodes:
-        self.configure_align_and_merge()
+        if umi:
+            # Configure the umi processes from fastq to bam file:
+            self.configure_umi_processing()
+        else:
+            # Configure alignment and merging of fastq data for all clinseq barcodes:
+            self.configure_align_and_merge()
 
         # Configure all panel analyses:
         self.configure_panel_analyses()
@@ -48,7 +55,7 @@ class LiqBioPipeline(ClinseqPipeline):
         self.configure_multi_qc()
 
     def configure_single_capture_analysis_liqbio(self, unique_capture):
-        input_bam = self.get_capture_bam(unique_capture)
+        input_bam = self.get_capture_bam(unique_capture, umi=False)
         sample_str = compose_lib_capture_str(unique_capture)
 
         # Configure svcaller analysis for each event type:
@@ -64,22 +71,22 @@ class LiqBioPipeline(ClinseqPipeline):
 
             self.set_capture_svs(unique_capture, event_type, (svcaller.output_bam, svcaller.output_gtf))
 
-        # # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
-        # # getting "pushed too far" in it's usage:
-        # sveffect = Sveffect()
-        # sveffect.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
-        # sveffect.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
-        # sveffect.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
-        # sveffect.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
-        # sveffect.ts_regions = self.refdata["ts_regions"]
-        # sveffect.ar_regions = self.refdata["ar_regions"]
-        # sveffect.fusion_regions = self.refdata["fusion_regions"]
-        # sveffect.output_combined_bed = "{}/svs/{}_combined.bed".format(self.outdir, sample_str)
-        # sveffect.output_effects_json = "{}/svs/{}_effects.json".format(self.outdir, sample_str)
+        # FIXME: This code is kind of nasty, as the self.capture_to_results data structure is
+        # getting "pushed too far" in it's usage:
+        sveffect = Sveffect()
+        sveffect.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
+        sveffect.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
+        sveffect.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
+        sveffect.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
+        sveffect.ts_regions = self.refdata["ts_regions"]
+        sveffect.ar_regions = self.refdata["ar_regions"]
+        sveffect.fusion_regions = self.refdata["fusion_regions"]
+        sveffect.output_combined_bed = "{}/svs/{}_combined.bed".format(self.outdir, sample_str)
+        sveffect.output_effects_json = "{}/svs/{}_effects.json".format(self.outdir, sample_str)
 
-        # self.add(sveffect)
+        self.add(sveffect)
 
-        # self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
+        self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
 
     def configure_panel_analyses_liqbio(self):
         # Configure liqbio analyses to be run on all unique panel captures individually:
@@ -99,8 +106,8 @@ class LiqBioPipeline(ClinseqPipeline):
         :param normal_capture: A unique normal sample library capture
         :param cancer_capture: A unique cancer sample library capture
         """
-        cancer_bam = self.get_capture_bam(cancer_capture)
-        normal_bam = self.get_capture_bam(normal_capture)
+        cancer_bam = self.get_capture_bam(cancer_capture, umi=False)
+        normal_bam = self.get_capture_bam(normal_capture, umi=False)
         target_name = self.get_capture_name(cancer_capture.capture_kit_id)
 
         cancer_capture_str = compose_lib_capture_str(cancer_capture)
@@ -113,10 +120,9 @@ class LiqBioPipeline(ClinseqPipeline):
         manta_sv.normalid = normal_capture_str
         manta_sv.reference_sequence = self.refdata["reference_genome"]
         manta_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
-        manta_sv.output_dir = "{}/variants/{}-{}-manta-somatic".format(self.outdir, cancer_capture_str, normal_capture_str)
+        manta_sv.output_dir = "{}/svs/{}-{}-manta-somatic".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(manta_sv)
-
 
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
         tumor_vs_normal_results = self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)]
@@ -159,6 +165,123 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.configure_manta(normal_capture, cancer_capture)
 
-        if self.refdata['targets'][capture_name]['purecn_targets']:
-            self.configure_purecn(normal_capture, cancer_capture)
-            self.configure_liqbio_cna(normal_capture, cancer_capture)
+        # if self.refdata['targets'][capture_name]['purecn_targets']:
+        #     self.configure_purecn(normal_capture, cancer_capture)
+        #     self.configure_liqbio_cna(normal_capture, cancer_capture)
+
+    def configure_umi_processing(self):
+        # configure for UMI SNV calling pipeline
+        #
+        capture_to_barcodes = self.get_unique_capture_to_clinseq_barcodes()
+        for unique_capture in capture_to_barcodes.keys():
+            capture_kit = unique_capture.capture_kit_id
+            for clinseq_barcode in capture_to_barcodes[unique_capture]:
+                trimmed_fqfiles = fq_trimming(self,
+                                  fq1_files=find_fastqs(clinseq_barcode, self.libdir)[0],
+                                  fq2_files=find_fastqs(clinseq_barcode, self.libdir)[1],
+                                  clinseq_barcode=clinseq_barcode,
+                                  ref=self.refdata['bwaIndex'],
+                                  outdir= "{}/bams/{}".format(self.outdir, capture_kit),
+                                  maxcores=self.maxcores)
+            
+            bam_file = self.configure_fastq_to_bam(fq_files=trimmed_fqfiles, 
+                                                    clinseq_barcode=clinseq_barcode, 
+                                                    capture_kit=capture_kit)
+            realigned_bam = self.configure_alignment_with_umi(bamfile=bam_file, 
+                                                    clinseq_barcode=clinseq_barcode, 
+                                                    capture_kit=capture_kit, jobname='1')
+            consensus_reads = self.configure_consensus_reads_calling(bam=realigned_bam, 
+                                                    clinseq_barcode=clinseq_barcode,
+                                                    capture_kit=capture_kit)
+            realigned_bam2 = self.configure_alignment_with_umi(bamfile=consensus_reads, 
+                                                    clinseq_barcode=clinseq_barcode, 
+                                                    capture_kit=capture_kit, jobname='2')
+            filtered_bam = self.configure_consensus_read_filter(bam=realigned_bam2 ,
+                                                    clinseq_barcode=clinseq_barcode,
+                                                    capture_kit=capture_kit)
+            clip_overlap_bam = self.configure_clip_overlapping(bam=filtered_bam,
+                                                    clinseq_barcode=clinseq_barcode,
+                                                    capture_kit=capture_kit)
+            mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
+
+            self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
+
+    def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
+        # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
+        align_unmap_bam = AlignUnmappedBam()
+        align_unmap_bam.input_bam = bamfile
+        align_unmap_bam.reference_genome = self.refdata['bwaIndex']
+        align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
+        align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
+        self.add(align_unmap_bam)
+
+        realingment = Realignment()
+        realingment.input_bam = align_unmap_bam.output_bam
+        realingment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
+        realingment.reference_genome = self.refdata['reference_genome']
+        realingment.known_indel1 = self.refdata['1KG']
+        realingment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
+        realingment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
+        realingment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
+        self.add(realingment)
+
+        return realingment.output_bam
+
+    def configure_fastq_to_bam(self, fq_files, clinseq_barcode, capture_kit):
+        # Extract UMIs from trimmed fastq and store in RX tag of unmapped bam (fgbio FastqToBam)
+        
+        library = parse_prep_id(clinseq_barcode)
+        sample = compose_sample_str(extract_unique_capture(clinseq_barcode))
+
+        fastq_to_bam = FastqToBam()
+        fastq_to_bam.input_fastq1 = fq_files[0]
+        fastq_to_bam.input_fastq2 = fq_files[1]
+        fastq_to_bam.sample = sample
+        fastq_to_bam.library = library
+        fastq_to_bam.output_bam = "{}/bams/{}/{}.unmapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        fastq_to_bam.jobname = "fastq-to-bam" + '-' + clinseq_barcode
+        self.add(fastq_to_bam)
+
+        return fastq_to_bam.output_bam
+
+    def configure_consensus_reads_calling(self, bam,  clinseq_barcode, capture_kit):
+
+        group_reads = GroupReadsByUmi()
+        group_reads.input_bam = bam
+        group_reads.output_histogram = "{}/bams/{}/{}.grouped.bam.fs.txt".format(self.outdir, capture_kit, clinseq_barcode)
+        group_reads.output_bam = "{}/bams/{}/{}.grouped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        group_reads.jobname = "group-reads-by-umi" + '-' + clinseq_barcode
+        self.add(group_reads)
+
+        call_consensus_reads = CallDuplexConsensusReads()
+        call_consensus_reads.input_bam = group_reads.output_bam
+        call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
+        self.add(call_consensus_reads)
+
+        return call_consensus_reads.output_bam
+
+    def configure_consensus_read_filter(self, bam, clinseq_barcode, capture_kit):
+
+        filter_con_reads = FilterConsensusReads()
+        filter_con_reads.input_bam = bam
+        filter_con_reads.reference_genome = self.refdata['reference_genome']
+        filter_con_reads.output_bam = "{}/bams/{}/{}.consensus.filtered.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        filter_con_reads.jobname = "filter-consensus-reads-{}".format(clinseq_barcode)
+        self.add(filter_con_reads)
+
+        return filter_con_reads.output_bam
+
+    def configure_clip_overlapping(self, bam, clinseq_barcode, capture_kit):
+
+        clip_overlap_reads = ClipBam()
+        clip_overlap_reads.input_bam = bam
+        clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        clip_overlap_reads.output_metrics = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
+        clip_overlap_reads.reference_genome = self.refdata['reference_genome']
+        self.add(clip_overlap_reads)
+
+        return clip_overlap_reads.output_bam
+
+
+
