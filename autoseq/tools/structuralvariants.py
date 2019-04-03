@@ -126,3 +126,24 @@ class MantaSomaticSV(Job):
 
         cmd = configure_mantasv + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd
+
+
+class SViCT(Job):
+  def __init__(self):
+    Job.__init__(self)
+    self.input_bam = None
+    self.reference_sequence = None
+    self.output = None
+    self.jobname = "svict-sv-calling"
+        
+  def command(self):
+
+    cmd = "svict -i {} ".format(self.input_bam) + \
+          " -r {} ".format(self.reference_sequence) + \
+          " -o {} ".format(self.output)
+
+    return cmd
+
+
+
+    

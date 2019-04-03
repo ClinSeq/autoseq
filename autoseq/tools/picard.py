@@ -1,5 +1,5 @@
 from pypedream.job import Job, required, optional, repeat, conditional
-
+import uuid
 
 class PicardCollectInsertSizeMetrics(Job):
     def __init__(self):
@@ -139,20 +139,23 @@ class PicardMergeSamFiles(Job):
 
 
 class PicardMarkDuplicates(Job):
-    def __init__(self, input_bam, output_bam, output_metrics, remove_duplicates=False):
+    def __init__(self, input_bam, output_bam, output_metrics, scratch="/tmp", remove_duplicates=False):
         Job.__init__(self)
         self.input_bam = input_bam
         self.output_bam = output_bam
         self.output_metrics = output_metrics
         self.remove_duplicates = remove_duplicates
+        self.scratch =scratch
         self.jobname = "picard-markdups"
 
     def command(self):
+        tmpdir = "{}/picard-markdups-{}".format(self.scratch, uuid.uuid4())
         return "picard -Xmx5g -XX:ParallelGCThreads=1 " + \
             required("-Djava.io.tmpdir=", self.scratch) + \
                 " MarkDuplicates " + \
                 required("INPUT=", self.input_bam) + \
                 required("METRICS_FILE=", self.output_metrics) + \
-                required("OUTPUT=", self.output_bam) + \
+                "OUTPUT=/dev/stdout "  + \
                 conditional(self.remove_duplicates, "REMOVE_DUPLICATES=true") + \
-                " && samtools index " + required("", self.output_bam)
+                "| samtools sort -@ 8 -T {} -o {} ".format(tmpdir, self.output_bam) + \
+                " && samtools index " + required("", self.output_bam) + " && rm {} ".format(tmpdir)

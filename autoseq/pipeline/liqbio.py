@@ -1,7 +1,7 @@
 from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
-from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV
+from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT
 from autoseq.tools.umi import *
 from autoseq.tools.alignment import fq_trimming, Realignment
 from autoseq.util.library import find_fastqs
@@ -92,6 +92,7 @@ class LiqBioPipeline(ClinseqPipeline):
         # Configure liqbio analyses to be run on all unique panel captures individually:
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
+            self.configure_svict(unique_capture)
 
         # Configure a liqbio analyses for each normal-cancer pairing:
         for normal_capture in self.get_mapped_captures_normal():
@@ -99,6 +100,18 @@ class LiqBioPipeline(ClinseqPipeline):
                 self.configure_panel_analysis_cancer_vs_normal_liqbio(
                     normal_capture, cancer_capture)
     
+    def configure_svict(self, unique_capture):
+
+        input_bam = self.get_capture_bam(unique_capture, umi=False)
+        sample_str = compose_lib_capture_str(unique_capture)
+
+        svict = SViCT()
+        svict.input_bam = input_bam
+        svict.reference_sequence = self.refdata["reference_genome"]
+        svict.output = "{}/svs/{}-svict".format(self.outdir, sample_str)
+
+        self.add(svict)
+
     def configure_manta(self, normal_capture, cancer_capture):
         """
         Configure manta, to identify structural variants in sample
@@ -163,7 +176,7 @@ class LiqBioPipeline(ClinseqPipeline):
     def configure_panel_analysis_cancer_vs_normal_liqbio(self, normal_capture, cancer_capture):
         capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
 
-        self.configure_manta(normal_capture, cancer_capture)
+        # self.configure_manta(normal_capture, cancer_capture)
 
         # if self.refdata['targets'][capture_name]['purecn_targets']:
         #     self.configure_purecn(normal_capture, cancer_capture)
