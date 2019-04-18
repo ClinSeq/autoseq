@@ -24,6 +24,9 @@ class Copy(Job):
                required(" ", self.output)
         if self.input.endswith(".bam"):
             cmd += " && samtools index {}".format(self.output)
+        
+        if self.input.endswith(".vcf.gz"):
+            cmd += " && tabix -p vcf {}".format(self.output)
         return cmd
 
 

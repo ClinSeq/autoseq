@@ -107,11 +107,10 @@ class VarDict(Job):
 
 class StrelkaSomatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,
-                 target_bed=None, input_indel_candidates=None ,output_dir=None, output_snvs_vcf=None, output_indels_vcf=None ):
+                 target_bed=None, output_dir=None, output_snvs_vcf=None, output_indels_vcf=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
-        self.input_indel_candidates = input_indel_candidates
         self.tumor_id = tumor_id
         self.normal_id = normal_id
         self.reference_sequence = reference_sequence
@@ -131,7 +130,6 @@ class StrelkaSomatic(Job):
                                     " --tumorBam " + self.input_tumor + \
                                     " --ref " +  self.reference_sequence + \
                                     " --callRegions " + self.target_bed + \
-                                    " --indelCandidates {}/results/variants/candidateSmallIndels.vcf.gz ".format(self.input_indel_candidates) + \
                                     " --runDir " + self.output_dir 
         
         cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
@@ -492,10 +490,10 @@ class InstallVep(Job):
         self.jobname = "fetch-vep-cache"
 
     def command(self):
-        return "vep_install.pl --SPECIES homo_sapiens_vep --AUTO c --ASSEMBLY GRCh37 --NO_HTSLIB " + \
+        return "vep_install --SPECIES homo_sapiens_vep --AUTO c --ASSEMBLY GRCh37 --NO_HTSLIB " + \
                required("--CACHEDIR ", self.output_dir) + \
-               " && vep_convert_cache.pl " + required("--dir ", self.output_dir) + \
-               " --species homo_sapiens --version 83_GRCh37"
+               " && vep_convert_cache " + required("--dir ", self.output_dir) + \
+               " --species homo_sapiens --version 95_GRCh37"
 
 def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, normal_capture,
                           target_name, outdir, callers=['vardict','strelka','mutect2', 'varscan'],
@@ -560,7 +558,6 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumor_id=tumor_sample_str,
                           normal_id=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
-                          input_indel_candidates="{}/svs/{}-{}-manta-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],
                           output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),

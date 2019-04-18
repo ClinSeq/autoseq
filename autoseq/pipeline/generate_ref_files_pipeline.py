@@ -31,6 +31,10 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         self.cosmic_vcf = "{}/CosmicCodingMuts_v71.vcf.gz".format(genome_resources)
         self.qdnaseq_background = "{}/qdnaseq_background.Rdata".format(genome_resources)
         self.swegene_common_vcf = "{}/swegen_common.vcf.gz".format(genome_resources)
+        self.thousand_genome_vcf = "{}/1000G_phase1.indels.b37.vcf.gz".format(genome_resources)
+        self.mills_and_1000g_gold_standard = "{}/Mills_and_1000G_gold_standard.indels.b37.vcf.gz".format(genome_resources)
+        self.brca_exchange = "{}/BrcaExchangeClinvar_15Jan2019_v26_hg19.vcf.gz".format(genome_resources)
+        self.oncokb = "{}/OncoKB_6Mar19_v1.9.txt".format(genome_resources)
         self.outdir = outdir
         self.maxcores = maxcores
         self.reference_data = dict()
@@ -52,7 +56,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
 
         fetch_vep_cache = InstallVep()
         fetch_vep_cache.output_dir = "{}/vep/".format(self.outdir)
-        self.add(fetch_vep_cache)
+        #self.add(fetch_vep_cache)
 
         self.reference_data['vep_dir'] = fetch_vep_cache.output_dir
 
@@ -130,12 +134,33 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         curl_swegene.output = "{}/variants/{}".format(self.outdir, os.path.basename(self.swegene_common_vcf))
         self.add(curl_swegene)
 
+        copy_thousand_genome = Copy(input_file=self.thousand_genome_vcf,
+                                    output_file="{}/variants/{}".format(self.outdir, os.path.basename(self.thousand_genome_vcf)))
+        self.add(copy_thousand_genome)
+
+        copy_mills_and_1000g = Copy(input_file=self.mills_and_1000g_gold_standard,
+                                    output_file="{}/variants/{}".format(self.outdir, os.path.basename(self.mills_and_1000g_gold_standard)))
+        self.add(copy_mills_and_1000g)
+
+        copy_brca_exchange = Copy(input_file=self.brca_exchange,
+                                output_file="{}/variants/{}".format(self.outdir, os.path.basename(self.brca_exchange)))
+        self.add(copy_brca_exchange)
+
+        copy_oncokb = Copy(input_file=self.oncokb,
+                        output_file="{}/variants/{}".format(self.outdir, os.path.basename(self.oncokb)))
+        self.add(copy_oncokb)
+
         self.reference_data['dbSNP'] = filter_dbsnp.output
         self.reference_data['cosmic'] = curl_cosmic.output
         self.reference_data['exac'] = curl_exac.output
         self.reference_data['clinvar'] = curl_clinvar.output
         self.reference_data['icgc'] = curl_icgc.output
         self.reference_data['swegene_common'] = curl_swegene.output
+        self.reference_data['1KG'] = copy_thousand_genome.output
+        self.reference_data['Mills_and_1KG_gold_standard'] = copy_mills_and_1000g.output
+        self.reference_data['brca_exchange'] = copy_brca_exchange.output
+        self.reference_data['oncokb'] = copy_oncokb.output
+        
 
     def prepare_cnvkit(self, cnv_kit_ref_filename):
         """
@@ -356,5 +381,6 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
                 else:
                     if v and self.outdir in v:
                         d[k] = os.path.relpath(v, self.outdir)
-
+                        
         make_paths_relative(self.reference_data)
+

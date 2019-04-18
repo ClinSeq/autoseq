@@ -1,7 +1,7 @@
 from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
-from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT
+from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT, Svaba, Lumpy
 from autoseq.tools.umi import *
 from autoseq.tools.alignment import fq_trimming, Realignment
 from autoseq.util.library import find_fastqs
@@ -137,6 +137,42 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.add(manta_sv)
 
+    def configure_sv_calling(self, normal_capture, cancer_capture):
+        """
+        Configure Structural Variant Calling, to identify structural variants in sample
+
+        :param normal_capture: A unique normal sample library capture
+        :param cancer_capture: A unique cancer sample library capture
+        """
+        cancer_bam = self.get_capture_bam(cancer_capture, umi=False)
+        normal_bam = self.get_capture_bam(normal_capture, umi=False)
+        target_name = self.get_capture_name(cancer_capture.capture_kit_id)
+
+        cancer_capture_str = compose_lib_capture_str(cancer_capture)
+        normal_capture_str = compose_lib_capture_str(normal_capture)
+
+        svaba = Svaba()
+        svaba.input_normal = normal_bam
+        svaba.input_tumor = cancer_bam
+        svaba.reference_sequence = self.refdata["bwaIndex"]
+        svaba.threads = self.maxcores
+        svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
+        svaba.output_sample = "{}/svs/svaba/{}-{}-svaba".format(self.outdir, normal_capture_str, cancer_capture_str)
+
+        self.add(svaba)
+
+        lumpy = Lumpy()
+        lumpy.input_normal = normal_bam
+        lumpy.input_tumor = cancer_bam
+        lumpy.normal_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir, normal_capture_str)
+        lumpy.tumor_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir,  cancer_capture_str)
+        lumpy.normal_splitters = "{}/svs/lumpy/{}-splitters.bam".format(self.outdir, normal_capture_str) 
+        lumpy.tumor_splitters = "{}/svs/lumpy/{}-splitters.bam".format(self.outdir,  cancer_capture_str) 
+        lumpy.output = "{}/svs/lumpy/{}-{}-lumpy.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
+        lumpy.threads = self.maxcores
+
+        self.add(lumpy)
+
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
         tumor_vs_normal_results = self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)]
         tumor_results = self.capture_to_results[cancer_capture]
@@ -175,6 +211,8 @@ class LiqBioPipeline(ClinseqPipeline):
 
     def configure_panel_analysis_cancer_vs_normal_liqbio(self, normal_capture, cancer_capture):
         capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
+
+        self.configure_sv_calling(normal_capture, cancer_capture)
 
         # self.configure_manta(normal_capture, cancer_capture)
 
@@ -217,7 +255,7 @@ class LiqBioPipeline(ClinseqPipeline):
                                                     capture_kit=capture_kit)
             mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
 
-            self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
+            self.set_capture_bam(unique_capture, filtered_bam, self.umi)
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
         # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
@@ -289,9 +327,9 @@ class LiqBioPipeline(ClinseqPipeline):
 
         clip_overlap_reads = ClipBam()
         clip_overlap_reads.input_bam = bam
-        clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
-        clip_overlap_reads.output_metrics = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
         clip_overlap_reads.reference_genome = self.refdata['reference_genome']
+        clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        clip_overlap_reads.metrics_txt = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
         self.add(clip_overlap_reads)
 
         return clip_overlap_reads.output_bam

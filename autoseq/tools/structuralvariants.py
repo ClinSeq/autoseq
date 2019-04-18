@@ -37,7 +37,6 @@ class Svcaller(Job):
             deactivate_env_cmd,
         )
 
-
 class Sveffect(Job):
     def __init__(self):
         Job.__init__(self)
@@ -89,7 +88,6 @@ class Sveffect(Job):
             deactivate_env_cmd,
         )
 
-
 class MantaSomaticSV(Job):
     def __init__(self):
         Job.__init__(self)
@@ -127,7 +125,6 @@ class MantaSomaticSV(Job):
         cmd = configure_mantasv + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd
 
-
 class SViCT(Job):
   def __init__(self):
     Job.__init__(self)
@@ -138,12 +135,79 @@ class SViCT(Job):
         
   def command(self):
 
-    cmd = "svict -i {} ".format(self.input_bam) + \
-          " -r {} ".format(self.reference_sequence) + \
-          " -o {} ".format(self.output)
-
+    cmd = ("svict -i {input_bam} -r {reference_sequence} -o {output} ").format(input_bam=self.input_bam, reference_sequence=self.reference_sequence, output=self.output)
     return cmd
 
+class Svaba(Job):
+  def __init__(self):
+    Job.__init__(self)
+    self.input_normal = None
+    self.input_tumor = None
+    self.target_bed = None
+    self.output_sample = None
+    self.reference_sequence = None
+    self.threads =  None
+    self.jobname = "svaba-sv-calling"
+
+  def command(self):
+
+    cmd = ("svaba run -t {tumor} -n {normal} -G {reference_sequence} -p {threads} -a {output_sample} ").format(
+              tumor = self.input_tumor,
+              normal = self.input_normal,
+              reference_sequence = self.reference_sequence,
+              threads = self.threads,
+              output_sample = self.output_sample
+              ) 
+
+    return cmd
+    
+class Lumpy(Job):
+  def __init__(self):
+    Job.__init__(self)
+    self.input_normal = None
+    self.input_tumor = None
+    self.normal_discordants = None
+    self.tumor_discordants = None
+    self.normal_splitters = None
+    self.tumor_splitters =  None
+    self.output = None
+    self.threads = None
+    self.jobname = "lumpy-sv-calling"
+
+  def command(self):
+
+    discordant_cmd = ("samtools view -@ {threads} -b -F 1294 {n_bam} > {n_discordants} " + \
+                    " && samtools view -@ {threads} -b -F 1294 {t_bam} > {t_discordants}").format(
+                          threads = self.threads,
+                          n_bam = self.input_normal,
+                          t_bam = self.input_tumor,
+                          n_discordants = self.normal_discordants,
+                          t_discordants = self.tumor_discordants)
+
+    splitter_cmd = ("samtools view -@ {threads} -h {n_bam} " + \
+                   "| extractSplitReads_BwaMem -i stdin | samtools view -@ {threads} -Sb - " + \
+                   " > {n_splitters} && samtools view -@ {threads} -h {t_bam}" + \
+                   "| extractSplitReads_BwaMem -i stdin | samtools view -@ {threads} -Sb - " + \
+                   " > {t_splitters} ").format(
+                          threads = self.threads,
+                          n_bam = self.input_normal,
+                          t_bam = self.input_tumor,
+                          n_splitters = self.normal_splitters,
+                          t_splitters = self.tumor_splitters
+                   )
+    lumpy_cmd = ("lumpyexpress -B {t_bam},{n_bam} -S {t_splitters},{n_splitters} " + \
+                " -D {t_discordants},{n_discordants} -o {output}").format(
+                          threads = self.threads,
+                          n_bam = self.input_normal,
+                          t_bam = self.input_tumor,
+                          n_discordants = self.normal_discordants,
+                          t_discordants = self.tumor_discordants,
+                          n_splitters = self.normal_splitters,
+                          t_splitters = self.tumor_splitters,
+                          output = self.output)
+
+    return " && ".join([discordant_cmd, splitter_cmd, lumpy_cmd])
+    
 
 
     
