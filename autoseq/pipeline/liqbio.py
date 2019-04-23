@@ -266,17 +266,20 @@ class LiqBioPipeline(ClinseqPipeline):
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
 
-        realingment = Realignment()
-        realingment.input_bam = align_unmap_bam.output_bam
-        realingment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
-        realingment.reference_genome = self.refdata['reference_genome']
-        realingment.known_indel1 = self.refdata['1KG']
-        realingment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
-        realingment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
-        realingment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
-        self.add(realingment)
+        targets = self.get_capture_name(capture_kit)
 
-        return realingment.output_bam
+        realignment = Realignment()
+        realignment.input_bam = align_unmap_bam.output_bam
+        realignment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
+        realignment.reference_genome = self.refdata['reference_genome']
+        realignment.target_region = self.refdata['targets'][targets]['targets-interval_list-slopped20'][:-3]
+        realignment.known_indel1 = self.refdata['1KG']
+        realignment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
+        realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
+        realignment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
+        self.add(realignment)
+
+        return realignment.output_bam
 
     def configure_fastq_to_bam(self, fq_files, clinseq_barcode, capture_kit):
         # Extract UMIs from trimmed fastq and store in RX tag of unmapped bam (fgbio FastqToBam)

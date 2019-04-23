@@ -97,24 +97,26 @@ class Realignment(Job):
         self.known_indel1 = None
         self.known_indel2 = None
         self.target_intervals = None
+        self.target_region =  None
         self.jobname = "Realignment"
 
     def command(self):
 
         # creating target intervals for indel realignment 
         # Param: -L can be added to specify the genomic region
-        target_creator_cmd = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+        target_creator_cmd = "java -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                             " -T RealignerTargetCreator " + \
                             " -R " + self.reference_genome + \
                             " -known " + self.known_indel1 + \
-			    " -allowPotentiallyMisencodedQuals " + \
+			                " -allowPotentiallyMisencodedQuals " + \
+                            " -L " + self.target_region + \
                             " -known " + self.known_indel2 + \
                             " -I " + self.input_bam + \
                             " -o " + self.target_intervals 
 
         realign_reads_cmd = "java -Xmx8G " + \
                             required("-Djava.io.tmpdir=", self.scratch) + \
-                            " -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                            " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                             " -T IndelRealigner " + \
                             " -R " + self.reference_genome + \
                             " -targetIntervals " + self.target_intervals + \

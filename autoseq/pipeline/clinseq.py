@@ -416,6 +416,7 @@ class ClinseqPipeline(PypedreamPipeline):
 
         # Strings indicating the sample and capture, for use in output file names below:
         capture_str = compose_lib_capture_str(unique_capture)
+        targets = self.get_capture_name(unique_capture.capture_kit_id)
         #sample_str = "{}-{}".format(unique_capture.sample_type, unique_capture.sample_id)
         #capture_str = "{}-{}-{}".format(sample_str, unique_capture.library_kit_id, unique_capture.capture_kit_id)
 
@@ -433,6 +434,7 @@ class ClinseqPipeline(PypedreamPipeline):
         realignment.output_bam = "{}/bams/{}/{}-realigned.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.reference_genome = self.refdata['reference_genome']
+        realignment.target_region = self.refdata['targets'][targets]['targets-interval_list-slopped20']
         realignment.known_indel1 = self.refdata["1KG"]
         realignment.known_indel2 = self.refdata["Mills_and_1KG_gold_standard"]
         self.add(realignment)

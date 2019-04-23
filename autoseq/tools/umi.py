@@ -86,7 +86,7 @@ class CallDuplexConsensusReads(Job):
 		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
-			  " --min-reads 2 1 0 --min-input-base-quality 30 "
+			  " --min-reads 1 1 0 --min-input-base-quality 30 "
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
 
@@ -106,7 +106,7 @@ class FilterConsensusReads(Job):
 		      " -i {}".format(self.input_bam) + \
 		      " -o " + self.output_bam + \
 		      " --ref " + self.reference_genome + \
-		      " --min-reads 3 2 0 --reverse-per-base-tags true --max-read-error-rate 1 " + \
+		      " --min-reads 1 1 0 --reverse-per-base-tags true --max-read-error-rate 1 " + \
 		      " --max-base-error-rate 0 --min-base-quality 30 --require-single-strand-agreement true" 
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
