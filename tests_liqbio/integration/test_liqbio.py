@@ -37,72 +37,15 @@ class TestLiqbio(unittest.TestCase, VariantAssertions, ReadAssertions):
         self.assertEqual(set([job['status'] for job in jobdb['jobs']]),
                          {'COMPLETED'})
 
-    # def test_somatic(self):
-    #     vcf = os.path.join(self.outdir, "variants",
-    #                        "AL-P-NA12877-T-03098849-TD-TT-AL-P-NA12877-N-03098121-TD-TT.vardict-somatic.vcf.gz")
+    def test_panel_bam_readgroups(self):
+        bam = os.path.join(self.outdir, "bams", "CB", "LB-P-00150441-T-03289395-TP-CB-nodups.bam")
+        self.assertBamHeaderElementEquals(bam, 'RG', [{'ID': 'LB-P-00150441-T-03289395-TP20180412-CB20180412',
+                                                       'SM': 'LB-P-00150441-T-03289395',
+                                                       'LB': 'TP20180412',
+                                                       'PL': 'ILLUMINA'}])
 
-    #     # TP53 insertion: MU2185182, chr17:g.7578475->G
-    #     # TP53 deletion: MU25947, chr17:g.7577558G>-
-    #     # TP53 DNV: MU52971976, chr17:g.7574003GG>AA
-    #     # PIK3CA hotspot E545K, MU5219, chr3:g.178936091G>A
-    #     # PTEN hotspot R130Q, MU29098, chr10:g.89692905G>A
-    #     # PTEN hotspot R233*, MU589331, chr10:g.89717672C>T
-    #     # AR intron variant, MU50988553, chrX:g.66788924G>A
-
-    #     self.assertVcfHasSample(vcf, 'AL-P-NA12877-N-03098121')  # N lib id is set
-    #     self.assertVcfHasSample(vcf, 'AL-P-NA12877-T-03098849')  # T lib id is the merged library
-
-    #     # deletion is called
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, 17, 7577557, 'AG', 'A')
-
-    #     # insertion is called
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, 17, 7578474, 'C', 'CG')
-
-    #     # dnv (GG>AA) is called as a single event
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, 17, 7574003, 'GG', 'AA')
-
-    #     # PTEN hotspots are called
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, 10, 89692905, 'G', 'A')
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, 10, 89717672, 'C', 'T')
-
-    #     # PIK3CA hotspot is called
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, 3, 178936091, 'G', 'A')
-
-    # def test_panel_bam_readgroups(self):
-    #     bam = os.path.join(self.outdir, "bams", "CB", "AL-P-NA12877-T-03098849-TD-CB-nodups.bam")
-    #     self.assertBamHeaderElementEquals(bam, 'RG', [{'ID': 'AL-P-NA12877-T-03098849-TD1-TT1',
-    #                                                    'SM': 'AL-P-NA12877-T-03098849',
-    #                                                    'LB': 'TD1',
-    #                                                    'PL': 'ILLUMINA'}])
-
-    #     bam = os.path.join(self.outdir, "bams", "TT", "LB-P-NA12877-CFDNA-03098850-TD-TT-nodups.bam")
-    #     self.assertBamHeaderElementEquals(bam, 'RG', [{'LB': 'TD1',
-    #                                                    'ID': 'LB-P-NA12877-CFDNA-03098850-TD1-TT1',
-    #                                                    'SM': 'LB-P-NA12877-CFDNA-03098850',
-    #                                                    'PL': 'ILLUMINA'},
-    #                                                   {'LB': 'TD1',
-    #                                                    'ID': 'LB-P-NA12877-CFDNA-03098850-TD1-TT2',
-    #                                                    'SM': 'LB-P-NA12877-CFDNA-03098850',
-    #                                                    'PL': 'ILLUMINA'}]
-    #                                       )
-
-    # def test_wgs_bam_coverage(self):
-    #     bam = os.path.join(self.outdir, "bams/WG/",
-    #                        "AL-P-NA12877-T-03098849-TD-WG-nodups.bam")
-    #     self.assertBamHasCoverageAt(bam, 1, '3', 3617655)  # 1x coverage in that position
-    #     self.assertBamHasCoverageAt(bam, 0, '3', 3618655)  # no coverage in that position
-
-    # def test_germline_vcf(self):
-    #     vcf = os.path.join(self.outdir, "variants",
-    #                        "AL-P-NA12877-N-03098121-TD-TT.freebayes-germline.vcf.gz")
-
-    #     self.assertVcfHasSample(vcf, 'AL-P-NA12877-N-03098121')  # sample is the name of the normal lib id
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, '3', 178925677, 'G', 'A')  # SNP
-    #     self.assertVcfHasVariantWithChromPosRefAlt(vcf, '17', 7579643, 'CCCCCAGCCCTCCAGGT', 'C')  # deletion
-
-    # def test_germline_vcf_with_added_tumor_afs(self):
-    #     vcf = os.path.join(self.outdir, "variants",
-    #                        "AL-P-NA12877-N-03098121-TD-TT-and-AL-P-NA12877-T-03098849-TD-TT.germline-variants-with-somatic-afs.vcf.gz")
-
-    #     self.assertVcfHasSample(vcf, 'AL-P-NA12877-N-03098121')
-    #     self.assertVcfHasSample(vcf, 'AL-P-NA12877-T-03098849')
+        bam = os.path.join(self.outdir, "bams", "CB", "LB-P-00150441-N-03289093-TP-CB-nodups.bam")
+        self.assertBamHeaderElementEquals(bam, 'RG', [{'LB': 'TP20180412',
+                                                       'ID': 'LB-P-00150441-N-03289093-TP20180412-CB20180412',
+                                                       'SM': 'LB-P-00150441-N-03289093-TP20180412',
+                                                       'PL': 'ILLUMINA'}]

@@ -1,7 +1,7 @@
 from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
-from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV
+from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT, Svaba, Lumpy
 from autoseq.tools.umi import *
 from autoseq.tools.alignment import fq_trimming, Realignment
 from autoseq.util.library import find_fastqs
@@ -92,6 +92,7 @@ class LiqBioPipeline(ClinseqPipeline):
         # Configure liqbio analyses to be run on all unique panel captures individually:
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
+            self.configure_svict(unique_capture)
 
         # Configure a liqbio analyses for each normal-cancer pairing:
         for normal_capture in self.get_mapped_captures_normal():
@@ -99,6 +100,18 @@ class LiqBioPipeline(ClinseqPipeline):
                 self.configure_panel_analysis_cancer_vs_normal_liqbio(
                     normal_capture, cancer_capture)
     
+    def configure_svict(self, unique_capture):
+
+        input_bam = self.get_capture_bam(unique_capture, umi=False)
+        sample_str = compose_lib_capture_str(unique_capture)
+
+        svict = SViCT()
+        svict.input_bam = input_bam
+        svict.reference_sequence = self.refdata["reference_genome"]
+        svict.output = "{}/svs/{}-svict".format(self.outdir, sample_str)
+
+        self.add(svict)
+
     def configure_manta(self, normal_capture, cancer_capture):
         """
         Configure manta, to identify structural variants in sample
@@ -123,6 +136,42 @@ class LiqBioPipeline(ClinseqPipeline):
         manta_sv.output_dir = "{}/svs/{}-{}-manta-somatic".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(manta_sv)
+
+    def configure_sv_calling(self, normal_capture, cancer_capture):
+        """
+        Configure Structural Variant Calling, to identify structural variants in sample
+
+        :param normal_capture: A unique normal sample library capture
+        :param cancer_capture: A unique cancer sample library capture
+        """
+        cancer_bam = self.get_capture_bam(cancer_capture, umi=False)
+        normal_bam = self.get_capture_bam(normal_capture, umi=False)
+        target_name = self.get_capture_name(cancer_capture.capture_kit_id)
+
+        cancer_capture_str = compose_lib_capture_str(cancer_capture)
+        normal_capture_str = compose_lib_capture_str(normal_capture)
+
+        svaba = Svaba()
+        svaba.input_normal = normal_bam
+        svaba.input_tumor = cancer_bam
+        svaba.reference_sequence = self.refdata["bwaIndex"]
+        svaba.threads = self.maxcores
+        svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
+        svaba.output_sample = "{}/svs/svaba/{}-{}-svaba".format(self.outdir, normal_capture_str, cancer_capture_str)
+
+        self.add(svaba)
+
+        lumpy = Lumpy()
+        lumpy.input_normal = normal_bam
+        lumpy.input_tumor = cancer_bam
+        lumpy.normal_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir, normal_capture_str)
+        lumpy.tumor_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir,  cancer_capture_str)
+        lumpy.normal_splitters = "{}/svs/lumpy/{}-splitters.bam".format(self.outdir, normal_capture_str) 
+        lumpy.tumor_splitters = "{}/svs/lumpy/{}-splitters.bam".format(self.outdir,  cancer_capture_str) 
+        lumpy.output = "{}/svs/lumpy/{}-{}-lumpy.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
+        lumpy.threads = self.maxcores
+
+        self.add(lumpy)
 
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
         tumor_vs_normal_results = self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)]
@@ -163,7 +212,9 @@ class LiqBioPipeline(ClinseqPipeline):
     def configure_panel_analysis_cancer_vs_normal_liqbio(self, normal_capture, cancer_capture):
         capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
 
-        self.configure_manta(normal_capture, cancer_capture)
+        self.configure_sv_calling(normal_capture, cancer_capture)
+
+        # self.configure_manta(normal_capture, cancer_capture)
 
         # if self.refdata['targets'][capture_name]['purecn_targets']:
         #     self.configure_purecn(normal_capture, cancer_capture)
@@ -204,7 +255,7 @@ class LiqBioPipeline(ClinseqPipeline):
                                                     capture_kit=capture_kit)
             mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
 
-            self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
+            self.set_capture_bam(unique_capture, filtered_bam, self.umi)
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
         # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
@@ -215,17 +266,20 @@ class LiqBioPipeline(ClinseqPipeline):
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
 
-        realingment = Realignment()
-        realingment.input_bam = align_unmap_bam.output_bam
-        realingment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
-        realingment.reference_genome = self.refdata['reference_genome']
-        realingment.known_indel1 = self.refdata['1KG']
-        realingment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
-        realingment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
-        realingment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
-        self.add(realingment)
+        targets = self.get_capture_name(capture_kit)
 
-        return realingment.output_bam
+        realignment = Realignment()
+        realignment.input_bam = align_unmap_bam.output_bam
+        realignment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
+        realignment.reference_genome = self.refdata['reference_genome']
+        realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
+        realignment.known_indel1 = self.refdata['1KG']
+        realignment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
+        realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
+        realignment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
+        self.add(realignment)
+
+        return realignment.output_bam
 
     def configure_fastq_to_bam(self, fq_files, clinseq_barcode, capture_kit):
         # Extract UMIs from trimmed fastq and store in RX tag of unmapped bam (fgbio FastqToBam)
@@ -276,9 +330,10 @@ class LiqBioPipeline(ClinseqPipeline):
 
         clip_overlap_reads = ClipBam()
         clip_overlap_reads.input_bam = bam
-        clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
-        clip_overlap_reads.output_metrics = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
         clip_overlap_reads.reference_genome = self.refdata['reference_genome']
+        clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        clip_overlap_reads.metrics_txt = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
+        clip_overlap_reads.jobname = "clip-overlap-reads-{}".format(clinseq_barcode)
         self.add(clip_overlap_reads)
 
         return clip_overlap_reads.output_bam

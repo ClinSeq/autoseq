@@ -107,11 +107,10 @@ class VarDict(Job):
 
 class StrelkaSomatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,
-                 target_bed=None, input_indel_candidates=None ,output_dir=None, output_snvs_vcf=None, output_indels_vcf=None ):
+                 target_bed=None, output_dir=None, output_snvs_vcf=None, output_indels_vcf=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
-        self.input_indel_candidates = input_indel_candidates
         self.tumor_id = tumor_id
         self.normal_id = normal_id
         self.reference_sequence = reference_sequence
@@ -131,7 +130,6 @@ class StrelkaSomatic(Job):
                                     " --tumorBam " + self.input_tumor + \
                                     " --ref " +  self.reference_sequence + \
                                     " --callRegions " + self.target_bed + \
-                                    " --indelCandidates {}/results/variants/candidateSmallIndels.vcf.gz ".format(self.input_indel_candidates) + \
                                     " --runDir " + self.output_dir 
         
         cmd = configure_strelkasomatic + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
@@ -148,8 +146,7 @@ class StrelkaSomatic(Job):
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,
-                 target_bed=None, output=None, bamout=None, exac=None, interval_list=None, tumor_getpileupsummaries_table=None, 
-                 tumor_calculatecontamination_table=None, output_filtered=None ):
+                 target_bed=None, output=None, bamout=None, interval_list=None, output_filtered=None ):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -159,10 +156,7 @@ class Mutect2Somatic(Job):
         self.target_bed = target_bed
         self.output = output
         self.bamout = bamout
-        self.exac_genome_vcf = exac
         self.interval_list = interval_list
-        self.tumor_getpileupsummaries_table = tumor_getpileupsummaries_table
-        self.tumor_calculatecontamination_table = tumor_calculatecontamination_table
         self.output_filtered = output_filtered
 
     def command(self):
@@ -170,10 +164,6 @@ class Mutect2Somatic(Job):
         required("", self.input_normal)
         required("", self.reference_sequence)
 
-        # configuration
-        # "-L " + \ We can update Interval List Once confirmed with Rebecka
-        # Call somatic short variants and generate a bamout with Mutect2
-        # --genome-resource , --af-of-alleles-not-in-resource
         mutectsomatic_cmd = "gatk --java-options '-Xmx10g' Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
@@ -184,33 +174,12 @@ class Mutect2Somatic(Job):
                                     " --disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
                                     " -bamout " + self.bamout + \
                                     " -O " + self.output
-        
-        # Estimate cross-sample contamination using GetPileupSummaries and CalculateContamination.
-        # Run GetPileupSummaries on the tumor BAM to summarize read support for a set number of known variant sites.
-        # mutect_getpileup_sum = "gatk --java-options '-Xmx10g' GetPileupSummaries " + \
-        #                           " -I " + self.input_tumor + \
-        #                           " -L " + self.interval_list + \
-        #                           " -V " + self.exac_genome_vcf + \
-        #                           " -O " + self.tumor_getpileupsummaries_table
-
-        # # Estimate contamination with CalculateContamination.
-        # mutect_cal_contamination = "gatk --java-options '-Xmx10g' CalculateContamination " + \
-        #                               " -I " + self.tumor_getpileupsummaries_table + \
-        #                               " -O " + self.tumor_calculatecontamination_table 
-
-        # Filter for confident somatic calls using FilterMutectCalls 
-        # filter_mutect_calls = "gatk --java-options '-Xmx10g' FilterMutectCalls " + \
-        #                         " -V " + self.output + \
-        #                         " --contamination-table " + self.tumor_calculatecontamination_table + \
-        #                         " -O "  + self.output_filtered
 
         filter_mutect_calls = "gatk --java-options '-Xmx10g' FilterMutectCalls " + \
                                 " -V " + self.output + \
                                 " -O "  + self.output_filtered
 
-        # rm_intermediate = "rm {} {}".format(self.tumor_getpileupsummaries_table, self.tumor_calculatecontamination_table)
-
-        # return " && ".join([mutectsomatic_cmd, mutect_getpileup_sum, mutect_cal_contamination, filter_mutect_calls, rm_intermediate])
+      
         return " && ".join([mutectsomatic_cmd, filter_mutect_calls])
 
 class Varscan2Somatic(Job):
@@ -237,9 +206,9 @@ class Varscan2Somatic(Job):
         required("", self.reference_sequence)
 
         # configuration
-        # "-L " + \ We can update Interval List Once confirmed with Rebecka
-        normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_normal + " > " + self.normal_pileup 
-        tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " " + self.input_tumor + " > " + self.tumor_pileup 
+        # 
+        normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " -l " + self.target_bed + " " + self.input_normal + " > " + self.normal_pileup 
+        tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " -l " + self.target_bed + " "  + self.input_tumor + " > " + self.tumor_pileup 
 
         varscan_cmd = "varscan -Xmx10g somatic " + self.normal_pileup + " " + self.tumor_pileup + \
                       " --output-snp " + self.output_snv + \
@@ -339,7 +308,7 @@ class SomaticSeq(Job):
 
     deactivate_ssenv = "source deactivate"
 
-    merge_vcf = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+    merge_vcf = "java -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                 " -T CombineVariants " + \
                 " -R " + self.reference_sequence + \
                 " --variant " + self.output_snv + \
@@ -439,12 +408,13 @@ class MergeVCF(Job):
 
   def command(self):
 
-    merge_vcf = "java -jar /nfs/ALASCCA/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+    merge_vcf = "java -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                 " -T CombineVariants " + \
                 " -R " + self.reference_genome + \
                 " --variant:haplotypecaller " + self.input_vcf_hc + \
                 " --variant:strelka " + self.input_vcf_strelka + \
-                " -genotypeMergeOptions UNIQUIFY " + \
+                " -genotypeMergeOptions PRIORITIZE " + \
+                " -priority haplotypecaller,strelka " + \
                 " | bgzip > {} ".format(self.output_vcf)
     
     tabix_vcf = "tabix -p vcf {} ".format(self.output_vcf)
@@ -492,10 +462,10 @@ class InstallVep(Job):
         self.jobname = "fetch-vep-cache"
 
     def command(self):
-        return "vep_install.pl --SPECIES homo_sapiens_vep --AUTO c --ASSEMBLY GRCh37 --NO_HTSLIB " + \
+        return "vep_install --SPECIES homo_sapiens_vep --AUTO c --ASSEMBLY GRCh37 --NO_HTSLIB " + \
                required("--CACHEDIR ", self.output_dir) + \
-               " && vep_convert_cache.pl " + required("--dir ", self.output_dir) + \
-               " --species homo_sapiens --version 83_GRCh37"
+               " && vep_convert_cache " + required("--dir ", self.output_dir) + \
+               " --species homo_sapiens --version 95_GRCh37"
 
 def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, normal_capture,
                           target_name, outdir, callers=['vardict','strelka','mutect2', 'varscan'],
@@ -560,7 +530,6 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         strelka_somatic = StrelkaSomatic(input_tumor=cancer_bam, input_normal=normal_bam, tumor_id=tumor_sample_str,
                           normal_id=normal_sample_str,
                           reference_sequence=pipeline.refdata['reference_genome'],
-                          input_indel_candidates="{}/svs/{}-{}-manta-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],
                           output_dir="{}/variants/{}-{}-strelka-somatic".format(outdir, normal_capture_str, cancer_capture_str),
                           output_snvs_vcf= "{}/variants/{}-{}-strelka-somatic/results/variants/somatic.passed.snvs.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
@@ -577,10 +546,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           reference_sequence=pipeline.refdata['reference_genome'],
                           output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
                           bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, normal_capture_str, cancer_capture_str),
-                          exac=pipeline.refdata['exac'] ,
                           interval_list=pipeline.refdata['targets'][capture_name]['targets-interval_list-slopped20'],
-                          tumor_getpileupsummaries_table= "{}/variants/mutect/{}-mutect-tumor-pileupsummary-table".format(outdir, cancer_capture_str),
-                          tumor_calculatecontamination_table= "{}/variants/mutect/{}-mutect-tumor-contamination-table".format(outdir, cancer_capture_str),
                           output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str)
                           )
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
@@ -592,7 +558,8 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                             normalid=normal_sample_str,
                             reference_sequence=pipeline.refdata['reference_genome'],
                             normal_pileup="{}/variants/varscan/{}.pileup".format(outdir, normal_capture_str),
-                            tumor_pileup="{}/variants/varscan/{}.pileup".format(outdir, cancer_capture_str),   
+                            tumor_pileup="{}/variants/varscan/{}.pileup".format(outdir, cancer_capture_str),
+                            target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20'],   
                             output_snv="{}/variants/varscan/{}-{}-varscan.snp.vcf".format(outdir, normal_capture_str, cancer_capture_str) ,
                             output_indel="{}/variants/varscan/{}-{}-varscan.indel.vcf".format(outdir, normal_capture_str, cancer_capture_str),
                             output_somatic_snv="{}/variants/varscan/{}-{}-varscan.snp.Somatic.vcf".format(outdir, normal_capture_str, cancer_capture_str),

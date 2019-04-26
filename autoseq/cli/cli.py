@@ -14,7 +14,7 @@ __author__ = 'dankle'
 
 
 @click.group()
-@click.option('--ref', default='/nfs/ALASCCA/autoseq-genome/autoseq-genome.json',
+@click.option('--ref', default='/nfs/PROBIO/autoseq-genome/autoseq-genome.json',
               help='json with reference files to use',
               type=str)
 @click.option('--job-params', default=None, help='JSON file specifying various pipeline job ' + \
