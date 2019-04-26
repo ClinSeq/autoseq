@@ -272,7 +272,7 @@ class LiqBioPipeline(ClinseqPipeline):
         realignment.input_bam = align_unmap_bam.output_bam
         realignment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         realignment.reference_genome = self.refdata['reference_genome']
-        realignment.target_region = self.refdata['targets'][targets]['targets-interval_list-slopped20'][:-3]
+        realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
         realignment.known_indel1 = self.refdata['1KG']
         realignment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
@@ -333,6 +333,7 @@ class LiqBioPipeline(ClinseqPipeline):
         clip_overlap_reads.reference_genome = self.refdata['reference_genome']
         clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
         clip_overlap_reads.metrics_txt = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)
+        clip_overlap_reads.jobname = "clip-overlap-reads-{}".format(clinseq_barcode)
         self.add(clip_overlap_reads)
 
         return clip_overlap_reads.output_bam
