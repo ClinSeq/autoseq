@@ -108,7 +108,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svict = SViCT()
         svict.input_bam = input_bam
         svict.reference_sequence = self.refdata["reference_genome"]
-        svict.output = "{}/svs/{}-svict".format(self.outdir, sample_str)
+        svict.output = "{}/svs/svict/{}-svict".format(self.outdir, sample_str)
 
         self.add(svict)
 
@@ -262,6 +262,7 @@ class LiqBioPipeline(ClinseqPipeline):
         align_unmap_bam = AlignUnmappedBam()
         align_unmap_bam.input_bam = bamfile
         align_unmap_bam.reference_genome = self.refdata['bwaIndex']
+        align_unmap_bam.threads = self.maxcores
         align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
