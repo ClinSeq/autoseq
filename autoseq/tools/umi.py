@@ -33,6 +33,7 @@ class AlignUnmappedBam(Job):
 		Job.__init__(self)
 		self.input_bam = None
 		self.reference_genome = None
+		self.threads = None
 		self.output_bam = None
 
 	def command(self):
@@ -41,7 +42,7 @@ class AlignUnmappedBam(Job):
 
 		picard_cmd = "picard SamToFastq I={} F=/dev/stdout INTERLEAVE=true TMP_DIR={} ".format(self.input_bam, tmpdir) 
 
-		bwa_cmd = "bwa mem -p -t 16 {} /dev/stdin ".format(self.reference_genome)
+		bwa_cmd = "bwa mem -p -t {} {} /dev/stdin ".format(self.threads, self.reference_genome)
 
 		picard_merge_cmd = "picard -Xmx10g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
 							" O={} ".format(self.output_bam) + \

@@ -538,7 +538,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
         strelka_somatic.jobname = "strelka-somatic-workflow/{}".format(cancer_capture_str)
         pipeline.add(strelka_somatic)
         d['strelka_snvs'] = strelka_somatic.output_snvs_vcf
-        d['strelka_indels'] = strelka_somatic.output_snvs_vcf
+        d['strelka_indels'] = strelka_somatic.output_indels_vcf
 
     if 'mutect2' in callers:
         mutect_somatic = Mutect2Somatic(input_tumor=cancer_bam, input_normal=normal_bam, tumor_id=tumor_sample_str,
