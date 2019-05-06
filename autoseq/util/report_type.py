@@ -85,12 +85,14 @@ def only_alascca_class_report(blood_barcode, tissue_barcode, db_config_file):
     # Dictionary over which hospital code hundred series that code for which country
     hospitalhundreds2country = {300: "SWEDEN",
                                 400: "NORWAY",
-                                500: "DENMARK"}
+                                500: "DENMARK",
+                                600: "FINLAND"}
     
     # Dictionary over which kind of report each country should have
     country2reporttype ={"DENMARK": "alascca_only",
                          "NORWAY": "full",
-                         "SWEDEN": "full"}
+                         "SWEDEN": "full",
+                         "FINLAND": "full"}
     
     # Get the hospital codes from the referrals
     hospital_blood = get_hospital_code(blood_barcode, AlasccaBloodReferral, db_config_file)

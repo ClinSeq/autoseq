@@ -46,6 +46,9 @@ Autoseq knows about the following capture kits:
 * `TT` = `test-regions`
 * `CM` = `monitor`
 * `CP` = `progression`
+* `PC` = `probio_comprehensive`
+* `PB` = `probio_biomarker_signature`
+* `PA` = `pancancer`
 
 ## Runners
 

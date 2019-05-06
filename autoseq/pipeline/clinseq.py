@@ -352,7 +352,10 @@ class ClinseqPipeline(PypedreamPipeline):
                                "AL": "alascca_targets",
                                "TT": "test-regions",
                                "CP": "progression",
-                               "CM": "monitor"
+                               "CM": "monitor",
+                               "PC": "probio_comprehensive",
+                               "PB": "probio_biomarker_signature",
+                               "PA": "pancancer"
                                }
 
         if capture_kit_code == 'WG':
