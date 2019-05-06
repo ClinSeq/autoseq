@@ -263,6 +263,7 @@ class LiqBioPipeline(ClinseqPipeline):
         align_unmap_bam.input_bam = bamfile
         align_unmap_bam.reference_genome = self.refdata['bwaIndex']
         align_unmap_bam.threads = self.maxcores
+        align_unmap_bam.scratch = self.scratch
         align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
@@ -271,6 +272,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
         realignment = Realignment()
         realignment.input_bam = align_unmap_bam.output_bam
+        realignment.scratch = self.scratch
         realignment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         realignment.reference_genome = self.refdata['reference_genome']
         realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
@@ -293,6 +295,7 @@ class LiqBioPipeline(ClinseqPipeline):
         fastq_to_bam.input_fastq2 = fq_files[1]
         fastq_to_bam.sample = sample
         fastq_to_bam.library = library
+        fastq_to_bam.scratch = self.scratch
         fastq_to_bam.output_bam = "{}/bams/{}/{}.unmapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
         fastq_to_bam.jobname = "fastq-to-bam" + '-' + clinseq_barcode
         self.add(fastq_to_bam)
@@ -303,6 +306,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
         group_reads = GroupReadsByUmi()
         group_reads.input_bam = bam
+        group_reads.scratch = self.scratch
         group_reads.output_histogram = "{}/bams/{}/{}.grouped.bam.fs.txt".format(self.outdir, capture_kit, clinseq_barcode)
         group_reads.output_bam = "{}/bams/{}/{}.grouped.bam".format(self.outdir, capture_kit, clinseq_barcode)
         group_reads.jobname = "group-reads-by-umi" + '-' + clinseq_barcode
@@ -310,6 +314,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
         call_consensus_reads = CallDuplexConsensusReads()
         call_consensus_reads.input_bam = group_reads.output_bam
+        call_consensus_reads.scratch = self.scratch
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
         call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
         self.add(call_consensus_reads)
@@ -320,6 +325,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
         filter_con_reads = FilterConsensusReads()
         filter_con_reads.input_bam = bam
+        filter_con_reads.scratch = self.scratch
         filter_con_reads.reference_genome = self.refdata['reference_genome']
         filter_con_reads.output_bam = "{}/bams/{}/{}.consensus.filtered.bam".format(self.outdir, capture_kit, clinseq_barcode)
         filter_con_reads.jobname = "filter-consensus-reads-{}".format(clinseq_barcode)
@@ -331,6 +337,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
         clip_overlap_reads = ClipBam()
         clip_overlap_reads.input_bam = bam
+        clip_overlap_reads.scratch = self.scratch
         clip_overlap_reads.reference_genome = self.refdata['reference_genome']
         clip_overlap_reads.output_bam = "{}/bams/{}/{}.clip.overlapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
         clip_overlap_reads.metrics_txt = "{}/qc/{}-clip_overlap_metrix.txt".format(self.outdir, clinseq_barcode)

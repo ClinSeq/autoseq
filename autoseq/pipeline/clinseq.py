@@ -431,6 +431,7 @@ class ClinseqPipeline(PypedreamPipeline):
         # Configure Realignment:
         realignment = Realignment()
         realignment.input_bam = merge_bams.output_bam
+        realignment.scratch = self.scratch
         realignment.output_bam = "{}/bams/{}/{}-realigned.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.reference_genome = self.refdata['reference_genome']
