@@ -1,5 +1,5 @@
 from pypedream.job import Job, required, optional, repeat, conditional
-
+import uuid
 
 class PicardCollectInsertSizeMetrics(Job):
     def __init__(self):
@@ -9,7 +9,7 @@ class PicardCollectInsertSizeMetrics(Job):
         self.jobname = "picard-isize"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 CollectInsertSizeMetrics H=/dev/null" + \
+        return "picard -XX:ParallelGCThreads=8 CollectInsertSizeMetrics H=/dev/null" + \
                required("I=", self.input) + \
                required("O=", self.output_metrics)
 
@@ -25,7 +25,7 @@ class PicardCollectGcBiasMetrics(Job):
         self.jobname = "picard-gcbias"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 -Xmx5g CollectGcBiasMetrics CHART=/dev/null" + \
+        return "picard -XX:ParallelGCThreads=8 -Xmx5g CollectGcBiasMetrics CHART=/dev/null" + \
                required("I=", self.input) + \
                required("O=", self.output_metrics) + \
                required("S=", self.output_summary) + \
@@ -42,7 +42,7 @@ class PicardCollectOxoGMetrics(Job):
         self.jobname = "picard-oxog"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 -Xmx2g CollectOxoGMetrics " + \
+        return "picard -XX:ParallelGCThreads=8 -Xmx2g CollectOxoGMetrics " + \
                required("I=", self.input) + \
                required("R=", self.reference_sequence) + \
                required("O=", self.output_metrics)
@@ -61,7 +61,7 @@ class PicardCollectHsMetrics(Job):
         self.jobname = "picard-hsmetrics"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 CollectHsMetrics " + \
+        return "picard -XX:ParallelGCThreads=8 CollectHsMetrics " + \
                required("I=", self.input) + \
                required("R=", self.reference_sequence) + \
                required("O=", self.output_metrics) + \
@@ -83,7 +83,7 @@ class PicardCollectWgsMetrics(Job):
         self.jobname = "picard-wgsmetrics"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 CollectWgsMetrics " + \
+        return "picard -XX:ParallelGCThreads=8 CollectWgsMetrics " + \
                required("I=", self.input) + \
                required("R=", self.reference_sequence) + \
                required("O=", self.output_metrics) + \
@@ -100,7 +100,7 @@ class PicardCreateSequenceDictionary(Job):
         self.jobname = "picard-createdict"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 CreateSequenceDictionary " + \
+        return "picard -XX:ParallelGCThreads=8 CreateSequenceDictionary " + \
                required("REFERENCE=", self.input) + \
                required("OUTPUT=", self.output_dict)
 
@@ -114,7 +114,7 @@ class PicardBedToIntervalList(Job):
         self.jobname = "picard-bedtointervallist"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 BedToIntervalList " + \
+        return "picard -XX:ParallelGCThreads=8 BedToIntervalList " + \
                required("INPUT=", self.input) + \
                required("SEQUENCE_DICTIONARY=", self.reference_dict) + \
                required("OUTPUT=", self.output)
@@ -130,7 +130,7 @@ class PicardMergeSamFiles(Job):
         self.jobname = "picard-mergesamfiles"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=1 MergeSamFiles " + \
+        return "picard -XX:ParallelGCThreads=8 MergeSamFiles " + \
                repeat("INPUT=", self.input_bams) + \
                required("ASSUME_SORTED=", str(self.assume_sorted).lower()) + \
                required("MERGE_SEQUENCE_DICTIONARIES=", str(self.merge_dicts).lower()) + \
@@ -139,20 +139,23 @@ class PicardMergeSamFiles(Job):
 
 
 class PicardMarkDuplicates(Job):
-    def __init__(self, input_bam, output_bam, output_metrics, remove_duplicates=False):
+    def __init__(self, input_bam, output_bam, output_metrics, scratch="/tmp", remove_duplicates=False):
         Job.__init__(self)
         self.input_bam = input_bam
         self.output_bam = output_bam
         self.output_metrics = output_metrics
         self.remove_duplicates = remove_duplicates
+        self.scratch =scratch
         self.jobname = "picard-markdups"
 
     def command(self):
-        return "picard -Xmx5g -XX:ParallelGCThreads=1 " + \
+        tmpdir = "{}/picard-markdups-{}".format(self.scratch, uuid.uuid4())
+        return "picard -Xmx5g -XX:ParallelGCThreads=8 " + \
             required("-Djava.io.tmpdir=", self.scratch) + \
                 " MarkDuplicates " + \
                 required("INPUT=", self.input_bam) + \
                 required("METRICS_FILE=", self.output_metrics) + \
-                required("OUTPUT=", self.output_bam) + \
+                "OUTPUT=/dev/stdout "  + \
                 conditional(self.remove_duplicates, "REMOVE_DUPLICATES=true") + \
-                " && samtools index " + required("", self.output_bam)
+                "| samtools sort -@ 8 -T {} -o {} ".format(tmpdir, self.output_bam) + \
+                " && samtools index " + required("", self.output_bam) 

@@ -151,7 +151,7 @@ class CNVkit(Job):
         sample_prefix = stripsuffix(os.path.basename(self.input_bam), ".bam")
         cnvkit_cmd = "cnvkit.py batch " + required("", self.input_bam) + \
                      optional("-r ", self.reference) + \
-                     conditional(self.targets_bed, "--fasta " + str(self.fasta) + " --split ") + \
+                     conditional(self.targets_bed, "--fasta " + str(self.fasta) ) + \
                      conditional(self.targets_bed, "-n") + \
                      optional("-t ", self.targets_bed) + \
                      required("-d ", tmpdir)
