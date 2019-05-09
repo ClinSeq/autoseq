@@ -825,9 +825,9 @@ class ClinseqPipeline(PypedreamPipeline):
         somatic_seq.input_vardict_vcf = somatic_variants['vardict']
         somatic_seq.input_strelka_snv = somatic_variants['strelka_snvs']
         somatic_seq.input_strelka_indel = somatic_variants['strelka_indels']
-        somatic_seq.output_dir = "{}/variants/{}-{}-somatic-seq".format(self.outdir, normal_capture_str, cancer_capture_str)
-        somatic_seq.output_snv = "{}/variants/{}-{}-somatic-seq/Consensus.sSNV.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
-        somatic_seq.output_indel = "{}/variants/{}-{}-somatic-seq/Consensus.sINDEL.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
+        somatic_seq.out_dir = "{}/variants/{}-{}-somatic-seq".format(self.outdir, normal_capture_str, cancer_capture_str)
+        somatic_seq.out_snv = "{}/variants/{}-{}-somatic-seq/Consensus.sSNV.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
+        somatic_seq.out_indel = "{}/variants/{}-{}-somatic-seq/Consensus.sINDEL.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
         somatic_seq.output_vcf = "{}/variants/{}-{}-all.somatic.vcf.gz".format(self.outdir, normal_capture_str, cancer_capture_str)
         self.add(somatic_seq)
 

@@ -284,9 +284,9 @@ class SomaticSeq(Job):
     self.input_vardict_vcf = None
     self.input_strelka_snv = None
     self.input_strelka_indel = None
-    self.output_dir = None
-    self.output_snv = None
-    self.output_indel = None
+    self.out_dir = None
+    self.out_snv = None
+    self.out_indel = None
     self.output_vcf = None
     self.jobname = 'somaticseq-vcf-merging'
 
@@ -295,7 +295,7 @@ class SomaticSeq(Job):
     somatic_seq_env = "source activate somaticseqenv"
 
     somatic_seq = "run_somaticseq.py " + \
-                  " --output-directory " + self.output_dir + \
+                  " --output-directory " + self.out_dir + \
                   " --genome-reference " + self.reference_sequence +  \
                   " paired " + \
                   " --tumor-bam-file " + self.input_tumor  + \
@@ -312,8 +312,8 @@ class SomaticSeq(Job):
     merge_vcf = "java -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                 " -T CombineVariants " + \
                 " -R " + self.reference_sequence + \
-                " --variant " + self.output_snv + \
-                " --variant " + self.output_indel + \
+                " --variant " + self.out_snv + \
+                " --variant " + self.out_indel + \
                 " --assumeIdenticalSamples " + \
                 " | bgzip > " + self.output_vcf 
     
