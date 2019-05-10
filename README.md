@@ -49,6 +49,8 @@ Autoseq knows about the following capture kits:
 * `PC` = `probio_comprehensive`
 * `PB` = `probio_biomarker_signature`
 * `PA` = `pancancer`
+* `C2` = `probio_comprehensive2`
+* `PN` = `pancancer2`
 
 ## Runners
 
