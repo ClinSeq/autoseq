@@ -104,7 +104,8 @@ class ClinseqPipeline(PypedreamPipeline):
             "cov-low-thresh-fold-cov": 50,
             "vardict-min-alt-frac": 0.02,
             "vardict-min-num-reads": None,
-            "vep-additional-options": ""
+            "vep-additional-options": "",
+            "maxnonclonal_purecn": 0.2
         }
 
         # Dictionary linking unique captures to corresponding generic single panel
@@ -1097,7 +1098,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)].cancer_contam_call = \
             cancer_contam_call
 
-    def configure_purecn(self, normal_capture, cancer_capture):
+    def configure_purecn(self, normal_capture, cancer_capture, umi):
         """
         Configure PureCN, and also configure the custom run of VarDict, which is
         required for PureCN.
@@ -1106,13 +1107,21 @@ class ClinseqPipeline(PypedreamPipeline):
         :param cancer_capture: A unique cancer sample library capture
         """
 
-        cancer_bam = self.get_capture_bam(cancer_capture, umi=False)
-        normal_bam = self.get_capture_bam(normal_capture, umi=False)
+        cancer_bam = self.get_capture_bam(cancer_capture, umi=umi)
+        normal_bam = self.get_capture_bam(normal_capture, umi=umi)
         target_name = self.get_capture_name(cancer_capture.capture_kit_id)
 
         cancer_capture_str = compose_lib_capture_str(cancer_capture)
         capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
         normal_capture_str = compose_lib_capture_str(normal_capture)
+        
+        # hard coded min AF and error rate, depending on UMI, for now
+        if umi:
+            minaf = 0.01
+            error = 0.0005
+        else:
+            minaf = 0.02
+            error = 0.001
 
         # Configure the PureCN-specific VarDict job:
         vardict_pureCN = VarDictForPureCN()
@@ -1124,6 +1133,8 @@ class ClinseqPipeline(PypedreamPipeline):
         vardict_pureCN.reference_dict = self.refdata['reference_dict']
         vardict_pureCN.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
         vardict_pureCN.dbsnp = self.refdata["dbSNP"]
+        vardict_pureCN.min_alt_frac = minaf
+        vardict_pureCN.min_num_reads = 6  # hard coded number of reads
         vardict_pureCN.output = "{}/variants/{}-{}.vardict-somatic-purecn.vcf.gz".format(
             self.outdir, cancer_capture_str, normal_capture_str)
         vardict_pureCN.jobname = "vardict_purecn/{}-{}".format(cancer_capture_str, normal_capture_str)
@@ -1131,16 +1142,21 @@ class ClinseqPipeline(PypedreamPipeline):
 
         # Retrieve the relevant seg-format file:
         seg_filename = self.capture_to_results[cancer_capture].seg
+        cnr_filename = self.capture_to_results[cancer_capture].cnr
 
         # Configure PureCN itself:
+        
         # FIXME: NOTE: The Job params *must* be specified as arguments in the case of PureCN:
         pureCN = PureCN(
             input_seg=seg_filename,
+            input_cnr=cnr_filename,
             input_vcf=vardict_pureCN.output,
             tumorid=cancer_capture_str,
-            gcgene_file=self.refdata['targets'][capture_name]['purecn_targets'],
             outdir="{}/purecn".format(self.outdir),
             postopt=True,
+            minaf=minaf,
+            error=error,
+            maxnonclonal=self.get_job_param("maxnonclonal_purecn")
         )
         self.add(pureCN)
 

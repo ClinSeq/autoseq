@@ -34,7 +34,7 @@ class LiqBioPipeline(ClinseqPipeline):
         self.configure_panel_analyses()
 
         # Configure liqbio-specific panel analyses:
-        self.configure_panel_analyses_liqbio()
+        self.configure_panel_analyses_liqbio(umi)
 
         # Configure additional msings analysis:
         self.configure_panel_msings_analyses()
@@ -88,7 +88,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
 
-    def configure_panel_analyses_liqbio(self):
+    def configure_panel_analyses_liqbio(self, umi):
         # Configure liqbio analyses to be run on all unique panel captures individually:
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
@@ -98,7 +98,7 @@ class LiqBioPipeline(ClinseqPipeline):
         for normal_capture in self.get_mapped_captures_normal():
             for cancer_capture in self.get_mapped_captures_cancer():
                 self.configure_panel_analysis_cancer_vs_normal_liqbio(
-                    normal_capture, cancer_capture)
+                    normal_capture, cancer_capture, umi)
     
     def configure_svict(self, unique_capture):
 
@@ -209,16 +209,16 @@ class LiqBioPipeline(ClinseqPipeline):
         liqbio_cna.output_purity_json = "{}/qc/{}-{}-liqbio-purity.json".format(self.outdir, normal_str, cancer_str)
         self.add(liqbio_cna)
 
-    def configure_panel_analysis_cancer_vs_normal_liqbio(self, normal_capture, cancer_capture):
+    def configure_panel_analysis_cancer_vs_normal_liqbio(self, normal_capture, cancer_capture, umi):
         capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
 
         self.configure_sv_calling(normal_capture, cancer_capture)
 
         # self.configure_manta(normal_capture, cancer_capture)
 
-        # if self.refdata['targets'][capture_name]['purecn_targets']:
-        #     self.configure_purecn(normal_capture, cancer_capture)
-        #     self.configure_liqbio_cna(normal_capture, cancer_capture)
+        # PureCN doesn't require a aspecific targets/gene file any more, so it can be run always
+        self.configure_purecn(normal_capture, cancer_capture, umi)
+        self.configure_liqbio_cna(normal_capture, cancer_capture)
 
     def configure_umi_processing(self):
         # configure for UMI SNV calling pipeline
