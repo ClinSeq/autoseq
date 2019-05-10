@@ -355,7 +355,9 @@ class ClinseqPipeline(PypedreamPipeline):
                                "CM": "monitor",
                                "PC": "probio_comprehensive",
                                "PB": "probio_biomarker_signature",
-                               "PA": "pancancer"
+                               "PA": "pancancer",
+                               "C2": "probio_comprehensive2",
+                               "PN": "pancancer2"
                                }
 
         if capture_kit_code == 'WG':
