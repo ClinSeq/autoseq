@@ -102,7 +102,12 @@ class LiqbioCNAPlot(Job):
         self.jobname = "liqbio-cna"
 
     def command(self):
-        return "liqbioCNA.R" + \
+        
+        # activating conda env
+        activate_cmd = "source activate liqbiocna-env"
+        
+        # running liqbioCNA.R
+        running_cmd = "liqbioCNA.R" + \
         required("--tumor_cnr ", self.input_tumor_cnr) + \
         required("--tumor_cns ", self.input_tumor_cns) + \
         required("--normal_cnr ", self.input_normal_cnr) + \
@@ -125,6 +130,11 @@ class LiqbioCNAPlot(Job):
         required("--plot_png ", self.output_plot_png) + \
         required("--cna_json ", self.output_cna_json) + \
         required("--purity_json ", self.output_purity_json)
+        
+        # deactivating the conda env
+        deactivate_cmd = "conda deactivate"
+
+        return " && ".join([activate_cmd, running_cmd, deactivate_cmd])
 
 
 class CNVkit(Job):
