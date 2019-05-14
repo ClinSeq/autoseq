@@ -70,4 +70,4 @@ class Bgzip(Job):
                required(" > ", self.output) + \
                " && tabix " + \
                optional("-p ", self.filetype) + \
-               " {} ".format(self.filetype, self.output)
+               " {} ".format(self.output)
