@@ -231,7 +231,7 @@ def prep_id_valid(prep_id_str):
 
 
 def capture_id_valid(capture_id_str):
-    return (re.match("^[A-Z]{2}[0-9]+$", capture_id_str) is not None) or \
+    return (re.match("^[A-Z0-9]{2}[0-9]+$", capture_id_str) is not None) or \
            (capture_id_str == "WGS")
 
 
