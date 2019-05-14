@@ -1,4 +1,4 @@
-from pypedream.job import Job, required
+from pypedream.job import Job, required, optional
 
 
 # case class bwaIndex(ref:File) extends ExternalCommonArgs with  SingleCoreJob with OneDayJob {
@@ -54,3 +54,19 @@ class Curl(Job):
         return "curl " + \
                required(" ", self.remote) + \
                required(" > ", self.output)
+
+class Bgzip(Job):
+    def __init__(self):
+        Job.__init__(self)
+        self.input = None
+        self.output = None
+        self.filetype = None
+        self.jobname = "bgzip"
+
+    def command(self):
+        return "bgzip " + \
+               required(" ", self.input) + \
+               required(" > ", self.output) + \
+               " && tabix " + \
+               optional("-p ", self.filetype) + \
+               " {} ".format(self.filetype, self.output)

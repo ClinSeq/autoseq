@@ -438,7 +438,7 @@ class ClinseqPipeline(PypedreamPipeline):
         realignment.output_bam = "{}/bams/{}/{}-realigned.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, unique_capture.capture_kit_id, capture_str)
         realignment.reference_genome = self.refdata['reference_genome']
-        realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
+        realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20']
         realignment.known_indel1 = self.refdata["1KG"]
         realignment.known_indel2 = self.refdata["Mills_and_1KG_gold_standard"]
         self.add(realignment)
@@ -542,7 +542,7 @@ class ClinseqPipeline(PypedreamPipeline):
                           normal_id=capture_str,
                           reference_sequence=self.refdata['reference_genome'],
                           output_dir="{}/variants/{}-strelka-germline".format(self.outdir, capture_str),
-                          target_bed=self.refdata['targets'][targets]['targets-bed-slopped20'] ,
+                          target_bed=self.refdata['targets'][targets]['targets-bed-slopped20-gz'],
                           output_filtered_vcf="{}/variants/{capture_str}-strelka-germline/results/variants/{capture_str}.strelka.passed.vcf.gz".format(self.outdir, capture_str=capture_str)
                           )
         strelka_germline.jobname = "strelka-germline-workflow/{}".format(capture_str)
@@ -1012,8 +1012,8 @@ class ClinseqPipeline(PypedreamPipeline):
         contest_vcf_generation = CreateContestVCFs()
         normal_capture_name = self.get_capture_name(normal_capture.capture_kit_id)
         cancer_capture_name = self.get_capture_name(cancer_capture.capture_kit_id)
-        normal_targets = self.refdata['targets'][normal_capture_name]['targets-bed-slopped20'][:-3]
-        cancer_targets = self.refdata['targets'][cancer_capture_name]['targets-bed-slopped20'][:-3]
+        normal_targets = self.refdata['targets'][normal_capture_name]['targets-bed-slopped20']
+        cancer_targets = self.refdata['targets'][cancer_capture_name]['targets-bed-slopped20']
         contest_vcf_generation.input_target_regions_bed_1 = normal_targets
         contest_vcf_generation.input_target_regions_bed_2 = cancer_targets
         contest_vcf_generation.input_population_vcf = self.refdata["swegene_common"]
@@ -1263,7 +1263,7 @@ class ClinseqPipeline(PypedreamPipeline):
         :param targets: Target capture name
         :return: bed file name
         """
-        return self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
+        return self.refdata['targets'][targets]['targets-bed-slopped20']
 
     def configure_panel_qc(self, unique_capture):
         """
@@ -1309,7 +1309,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.add(hsmetrics)
 
         sambamba = SambambaDepth()
-        sambamba.targets_bed = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
+        sambamba.targets_bed = self.refdata['targets'][targets]['targets-bed-slopped20']
         sambamba.input = bam
         sambamba.output = "{}/qc/sambamba/{}.sambamba-depth-targets.txt".format(
             self.outdir, capture_str)

@@ -132,7 +132,7 @@ class LiqBioPipeline(ClinseqPipeline):
         manta_sv.tumorid = cancer_capture_str
         manta_sv.normalid = normal_capture_str
         manta_sv.reference_sequence = self.refdata["reference_genome"]
-        manta_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
+        manta_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20-gz']
         manta_sv.output_dir = "{}/svs/{}-{}-manta-somatic".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(manta_sv)
@@ -156,7 +156,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svaba.input_tumor = cancer_bam
         svaba.reference_sequence = self.refdata["bwaIndex"]
         svaba.threads = self.maxcores
-        svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
+        svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20-gz']
         svaba.output_sample = "{}/svs/svaba/{}-{}-svaba".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(svaba)
@@ -275,7 +275,7 @@ class LiqBioPipeline(ClinseqPipeline):
         realignment.scratch = self.scratch
         realignment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         realignment.reference_genome = self.refdata['reference_genome']
-        realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20'][:-3]
+        realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20']
         realignment.known_indel1 = self.refdata['1KG']
         realignment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)

@@ -12,7 +12,7 @@ from autoseq.tools.intervals import SlopIntervalList, IntervalListToBed
 from autoseq.tools.msi import MsiSensorScan, IntersectMsiSites
 from autoseq.tools.picard import PicardCreateSequenceDictionary
 from autoseq.tools.qc import *
-from autoseq.tools.unix import Gunzip, Curl, Copy
+from autoseq.tools.unix import Gunzip, Curl, Copy, Bgzip
 from autoseq.tools.variantcalling import VcfFilter, CurlSplitAndLeftAlign, InstallVep
 from autoseq.util.path import stripsuffix, normpath
 
@@ -251,6 +251,13 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
             interval_list_to_bed.input = slop_interval_list.output
             interval_list_to_bed.output = stripsuffix(slop_interval_list.output, ".interval_list") + ".bed"
             self.add(interval_list_to_bed)
+            
+            gzip_bed = Bgzip()
+            gzip_bed.input = interval_list_to_bed.output
+            gzip_bed.output = interval_list_to_bed.output + ".gz"
+            gzip_bed.filetype = "bed"
+            self.add(gzip_bed)
+
 
             intersect_msi = IntersectMsiSites()
             intersect_msi.input_msi_sites = scan_for_microsatellites.output
@@ -286,6 +293,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
             self.reference_data['targets'][capture_name]['targets-interval_list'] = copy_file.output
             self.reference_data['targets'][capture_name]['targets-interval_list-slopped20'] = slop_interval_list.output
             self.reference_data['targets'][capture_name]['targets-bed-slopped20'] = interval_list_to_bed.output
+            self.reference_data['targets'][capture_name]['targets-bed-slopped20-gz'] = gzip_bed.output
             self.reference_data['targets'][capture_name]['msisites'] = intersect_msi.output_msi_sites
 
         # Find all .cnn files and copy + register them for use in cnv kit:
