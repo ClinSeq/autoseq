@@ -64,8 +64,9 @@ class Bgzip(Job):
         self.jobname = "bgzip"
 
     def command(self):
-        return "bgzip " + \
+        return "cat " + \
                required(" ", self.input) + \
+               " | bgzip " + \
                required(" > ", self.output) + \
                " && tabix " + \
                optional("-p ", self.filetype) + \
