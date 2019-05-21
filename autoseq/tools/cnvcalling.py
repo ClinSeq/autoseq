@@ -96,6 +96,7 @@ class LiqbioCNAPlot(Job):
         self.input_germline_mut_vcf = None
         self.input_somatic_mut_vcf = None
         self.output_plot_png = None
+        self.output_plot_png_normal = None
         self.output_cna_json = None
         self.output_purity_json = None
 
@@ -128,6 +129,7 @@ class LiqbioCNAPlot(Job):
         required("--germline_mut_vcf ", self.input_germline_mut_vcf) + \
         required("--somatic_mut_vcf ", self.input_somatic_mut_vcf) + \
         required("--plot_png ", self.output_plot_png) + \
+        required("--plot_png_normal ", self.output_plot_png_normal) + \
         required("--cna_json ", self.output_cna_json) + \
         required("--purity_json ", self.output_purity_json)
         
