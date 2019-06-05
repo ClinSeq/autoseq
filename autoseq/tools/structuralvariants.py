@@ -132,6 +132,7 @@ class SViCT(Job):
     self.reference_sequence = None
     self.output = None
     self.jobname = "svict-sv-calling"
+    self.output_vcf = None
         
   def command(self):
 
@@ -208,6 +209,27 @@ class Lumpy(Job):
 
     return " && ".join([discordant_cmd, splitter_cmd, lumpy_cmd])
     
+
+class GenerateIGVNavInputSV(Job):
+    def __init__(self):
+        self.input_vcf = None
+        self.sdid = None
+        self.vcftype = None
+        self.tool = None
+        self.output = None
+        self.jobname = None
+
+    def command(self):
+        vcftype = ''
+        if self.vcftype:
+            vcftype = " --vcftype " + self.vcftype
+
+        return "generateIGVnavInput_SV.py --vcf {input_vcf} --sdid {sdid} {vcftype} --tool {tool} \
+            --output {output}".format(input_vcf=self.input_vcf,
+                                      sdid=self.sdid,
+                                      tool=self.tool,
+                                      vcftype=vcftype,
+                                      output=self.output)
 
 
     
