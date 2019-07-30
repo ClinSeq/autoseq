@@ -138,3 +138,24 @@ class CoverageCaveat(Job):
                required("--low-thresh-fraction ", self.low_thresh_fraction) + \
                required("--low-thresh-fold-cov ", self.low_thresh_fold_cov) + \
                required("> ", self.output)
+
+class QcOverviewPlot(Job):
+    def __init__(self):
+        Job.__init__(self)
+        self.input_picard_files = None
+        self.input_contest_tumor = None
+        self.input_contest_normal = None
+        self.samples_of_interest = None
+        self.output = None
+        self.mainpath = None
+        self.jobname = "QC_overview_plot"
+        
+    def command(self):
+        # turn sample list into :-separated string for compatibility with script
+        samples_of_interest = ":".join(self.samples_of_interest)
+        
+        # create the command
+        return "QC_overview.R " + \
+               required("-s ", samples_of_interest) + \
+               required("-o ", self.output) + \
+               required("-m ", self.mainpath)

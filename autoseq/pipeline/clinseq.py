@@ -14,6 +14,7 @@ from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateCo
 from autoseq.tools.qc import *
 from autoseq.util.clinseq_barcode import *
 import collections, logging
+from os.path import dirname
 
 
 class InvalidRefDataException(Exception):
@@ -1255,6 +1256,23 @@ class ClinseqPipeline(PypedreamPipeline):
         multiqc.jobname = "multiqc-{}".format(self.sampledata['sdid'])
         self.add(multiqc)
 
+    def configure_qc_overview_plot(self, normal_capture, cancer_capture):
+        # get the sample names of interest
+        samples_of_interest = [compose_lib_capture_str(unique_capture) for unique_capture in
+                               [normal_capture, cancer_capture]]
+        
+        # configure the job
+        qcoverview = QcOverviewPlot()
+        qcoverview.input_picard_files = self.qc_files
+        qcoverview.input_contest_tumor = self.normal_cancer_pair_to_results[
+            (normal_capture, cancer_capture)].cancer_contest_output
+        qcoverview.input_contest_normal = self.normal_cancer_pair_to_results[
+            (normal_capture, cancer_capture)].normal_contest_output
+        qcoverview.samples_of_interest = samples_of_interest
+        qcoverview.output = "{}/qc/{}.qc_overview.pdf".format(self.outdir, "_".join(samples_of_interest))
+        qcoverview.mainpath = dirname(dirname(self.outdir.rstrip("/")))  # use directory two levels up as main directory to search for QC files
+        self.jobname = "QC_overview_plot_" + "_".join(samples_of_interest)
+        
     def get_coverage_bed(self, targets):
         """
         Retrieve the targets bed file to use for calculating coverage, given the specified

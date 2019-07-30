@@ -53,6 +53,11 @@ class LiqBioPipeline(ClinseqPipeline):
 
         # Configure MultiQC:
         self.configure_multi_qc()
+        
+        # Configure QC overview plot
+        for normal_capture in self.get_mapped_captures_normal():
+            for cancer_capture in self.get_mapped_captures_cancer():
+                self.configure_qc_overview_plot(normal_capture, cancer_capture)
 
     def configure_single_capture_analysis_liqbio(self, unique_capture):
         input_bam = self.get_capture_bam(unique_capture, umi=False)
