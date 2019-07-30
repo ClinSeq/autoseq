@@ -1,7 +1,7 @@
 from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
-from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT, Svaba, Lumpy
+from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT, Svaba, Lumpy, GenerateIGVNavInputSV
 from autoseq.tools.umi import *
 from autoseq.tools.alignment import fq_trimming, Realignment
 from autoseq.util.library import find_fastqs
@@ -109,8 +109,19 @@ class LiqBioPipeline(ClinseqPipeline):
         svict.input_bam = input_bam
         svict.reference_sequence = self.refdata["reference_genome"]
         svict.output = "{}/svs/svict/{}-svict".format(self.outdir, sample_str)
+        svict.output_vcf = "{}/svs/svict/{}-svict.vcf".format(self.outdir, sample_str)
 
         self.add(svict)
+
+        svict_igvinput = GenerateIGVNavInputSV()
+        svict_igvinput.input_vcf = svict.output_vcf
+        svict_igvinput.sdid = unique_capture.sdid
+        svict_igvinput.tool = 'svict'
+        svict_igvinput.output = "{}/svs/igv/{}".format(self.outdir, sample_str)
+        svict_igvinput.jobname = "generate-igvnav-input-svict"
+
+        self.add(svict_igvinput)
+
 
     def configure_manta(self, normal_capture, cancer_capture):
         """
@@ -157,9 +168,25 @@ class LiqBioPipeline(ClinseqPipeline):
         svaba.reference_sequence = self.refdata["bwaIndex"]
         svaba.threads = self.maxcores
         svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20-gz']
-        svaba.output_sample = "{}/svs/svaba/{}-{}-svaba".format(self.outdir, normal_capture_str, cancer_capture_str)
+        svaba.output_sample = "{}/svs/svaba/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+        svaba.output_somatic = "{}/svs/svaba/{}-{}.svaba.somatic.sv.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
+        svaba.output_germline = "{}/svs/svaba/{}-{}.svaba.germline.sv.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(svaba)
+        
+        svaba_igvinput = {}
+
+        for vcftype in ['germline', 'somatic']:
+            svaba_igvinput[vcftype] = GenerateIGVNavInputSV()
+            svaba_igvinput[vcftype].input_vcf = svaba.output_somatic if vcftype == 'somatic' else svaba.output_germline
+            svaba_igvinput[vcftype].sdid = cancer_capture.sdid
+            svaba_igvinput[vcftype].tool = 'svaba'
+            svaba_igvinput[vcftype].vcftype = vcftype
+            svaba_igvinput[vcftype].output = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+            svaba_igvinput[vcftype].jobname = "generate-igvnav-input-svaba" + vcftype
+
+            self.add(svaba_igvinput[vcftype])
+
 
         lumpy = Lumpy()
         lumpy.input_normal = normal_bam
@@ -172,6 +199,16 @@ class LiqBioPipeline(ClinseqPipeline):
         lumpy.threads = self.maxcores
 
         self.add(lumpy)
+
+        lumpy_igvinput = GenerateIGVNavInputSV()
+        lumpy_igvinput.input_vcf = lumpy.output
+        lumpy_igvinput.sdid = cancer_capture.sdid
+        lumpy_igvinput.tool = 'lumpy'
+        lumpy_igvinput.output = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+        lumpy_igvinput.jobname = "generate-igvnav-input-lumpy"
+
+        self.add(lumpy_igvinput)
+
 
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
         tumor_vs_normal_results = self.normal_cancer_pair_to_results[(normal_capture, cancer_capture)]
