@@ -1271,7 +1271,7 @@ class ClinseqPipeline(PypedreamPipeline):
         qcoverview.samples_of_interest = samples_of_interest
         qcoverview.output = "{}/qc/{}.qc_overview.pdf".format(self.outdir, "_".join(samples_of_interest))
         qcoverview.mainpath = dirname(dirname(self.outdir.rstrip("/")))  # use directory two levels up as main directory to search for QC files
-        self.jobname = "QC_overview_plot_" + "_".join(samples_of_interest)
+        qcoverview.jobname = "QC_overview_plot_" + "_".join(samples_of_interest)
         self.add(qcoverview)
         
     def get_coverage_bed(self, targets):
