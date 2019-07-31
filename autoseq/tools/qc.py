@@ -153,9 +153,17 @@ class QcOverviewPlot(Job):
     def command(self):
         # turn sample list into :-separated string for compatibility with script
         samples_of_interest = ":".join(self.samples_of_interest)
-        
-        # create the command
-        return "QC_overview.R " + \
+
+        # activating conda env (use purecn-env since it has optparse R library, which is required by QC_overview.R)
+        activate_cmd = "source activate purecn-env"
+
+        # running QC_overview.R
+        running_cmd = "QC_overview.R " + \
                required("-s ", samples_of_interest) + \
                required("-o ", self.output) + \
                required("-m ", self.mainpath)
+        
+        # deactivating the conda env
+        deactivate_cmd = "conda deactivate"
+
+        return " && ".join([activate_cmd, running_cmd, deactivate_cmd])
