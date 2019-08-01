@@ -5,7 +5,6 @@ import os
 import shutil
 import logging 
 
-__author__ = "Vinay Kaikala"
 
 class GenerateSymlink():
     "Generates symlinks required for IGVnav inputs"
