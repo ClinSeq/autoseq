@@ -158,11 +158,11 @@ class Svaba(Job):
               reference_sequence = self.reference_sequence,
               threads = self.threads,
               output_sample = self.output_sample
-              ) 
+              )
     
     index_cmd = "samtools index {}.contigs.bam".format(self.output_sample)
     
-    cmd = " && ".join(svaba_cmd, index_cmd)
+    cmd = " && ".join([svaba_cmd, index_cmd])
 
     return cmd
     
