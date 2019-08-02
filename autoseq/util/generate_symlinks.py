@@ -27,7 +27,7 @@ class GenerateSymlink():
         try:
             symlinks = (('variants','.vep.vcf'),('bams','-nodups.bam'), ('bams','-nodups.bam.bai'),
                         ('bams','.overlapped.bam'), ('bams','.overlapped.bai'), ('variants','.vep.vcf'),
-                      ('svs/igv','.mut'), ('svs','.gtf'),('svs','.bam'),('svs/svaba', '.contigs.bam'), ('', 'igvnav-input.txt')) +  args
+                      ('svs/igv','.mut'), ('svs','.gtf'), ('svs','.bam'),('svs/svaba', '.contigs.bam'), ('svs','.bai'), ('', 'igvnav-input.txt')) +  args
             for each_input in symlinks:
                 dir_name = os.path.join(src_dir,each_input[0])
                 self.create_symlink(dir_name, src_dir, igvnav_dirname_dst, each_input[1])

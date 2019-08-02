@@ -152,13 +152,17 @@ class Svaba(Job):
 
   def command(self):
 
-    cmd = ("svaba run -t {tumor} -n {normal} -G {reference_sequence} -p {threads} -a {output_sample} ").format(
+    svaba_cmd = ("svaba run -t {tumor} -n {normal} -G {reference_sequence} -p {threads} -a {output_sample} ").format(
               tumor = self.input_tumor,
               normal = self.input_normal,
               reference_sequence = self.reference_sequence,
               threads = self.threads,
               output_sample = self.output_sample
               ) 
+    
+    index_cmd = "samtools index {}.contigs.bam".format(self.output_sample)
+    
+    cmd = " && ".join(svaba_cmd, index_cmd)
 
     return cmd
     
@@ -207,7 +211,10 @@ class Lumpy(Job):
                           t_splitters = self.tumor_splitters,
                           output = self.output)
 
-    return " && ".join([discordant_cmd, splitter_cmd, lumpy_cmd])
+    index_cmd = "samtools index {} && samtools index {} && samtools index {} && samtools index {}".format(
+        self.normal_discordants, self.normal_splitters, self.tumor_discordants, self.tumor_splitters)
+
+    return " && ".join([discordant_cmd, splitter_cmd, lumpy_cmd, index_cmd])
     
 
 class GenerateIGVNavInputSV(Job):
