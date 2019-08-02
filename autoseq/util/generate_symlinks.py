@@ -25,8 +25,9 @@ class GenerateSymlink():
         logging.info("Generating IGVNav Symlinks in : " + igvnav_dirname_dst ) 
         if not os.path.exists(igvnav_dirname_dst): os.mkdir(igvnav_dirname_dst)
         try:
-            symlinks = (('variants','.vep.vcf'),('bams','-nodups.bam'), ('bams','.overlapped.bam'), ('variants','.vep.vcf'), \
-                      ('svs/igv','.mut'), ('svs','.gtf'),('svs','.bam'),('svs/svaba', '.contigs.bam'), (self.outputdirname, 'igvnav-input.txt')) +  args
+            symlinks = (('variants','.vep.vcf'),('bams','-nodups.bam'), ('bams','-nodups.bam.bai'),
+                        ('bams','.overlapped.bam'), ('bams','.overlapped.bai'), ('variants','.vep.vcf'),
+                      ('svs/igv','.mut'), ('svs','.gtf'),('svs','.bam'),('svs/svaba', '.contigs.bam'), ('', 'igvnav-input.txt')) +  args
             for each_input in symlinks:
                 dir_name = os.path.join(src_dir,each_input[0])
                 self.create_symlink(dir_name, src_dir, igvnav_dirname_dst, each_input[1])
