@@ -146,6 +146,7 @@ class QcOverviewPlot(Job):
         self.input_contest_tumor = None
         self.input_contest_normal = None
         self.samples_of_interest = None
+        self.analysis_dir = None
         self.output = None
         self.mainpath = None
         self.jobname = "QC_overview_plot"
@@ -160,6 +161,7 @@ class QcOverviewPlot(Job):
         # running QC_overview.R
         running_cmd = "QC_overview.R " + \
                required("-s ", samples_of_interest) + \
+               required("-d ", self.analysis_dir) + \
                required("-o ", self.output) + \
                required("-m ", self.mainpath)
         
