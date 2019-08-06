@@ -9,7 +9,7 @@ import click
 from autoseq.pipeline.liqbio import LiqBioPipeline
 from autoseq.util.clinseq_barcode import extract_clinseq_barcodes, convert_barcodes_to_sampledict, validate_clinseq_barcodes
 from autoseq.util.path import mkdir
-
+from autoseq.util.generate_symlinks import GenerateSymlink
 
 @click.command()
 @click.argument('sample', type=click.File('r'))
@@ -45,6 +45,11 @@ def liqbio(ctx, sample):
         time.sleep(5)
 
     # # return_code from run_pipeline() will be != 0 if the pipeline fails
+    ##Run post process scrpits######### 
+    print("Generate IGV Nav")
+    create_symlinks = GenerateSymlink(ctx.obj['outdir'])
+    create_symlinks.generateIGVsymlink()  
+    ###################################
     sys.exit(ctx.obj['pipeline'].exitcode)
 
 
