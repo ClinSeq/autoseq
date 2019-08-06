@@ -160,9 +160,11 @@ class Svaba(Job):
               output_sample = self.output_sample
               )
     
-    index_cmd = "samtools index {}.contigs.bam".format(self.output_sample)
+    sort_cmd = "samtools sort {}.contigs.bam -o {}.contigs.sort.bam".format(self.output_sample, self.output_sample)
     
-    cmd = " && ".join([svaba_cmd, index_cmd])
+    index_cmd = "samtools index {}.contigs.sort.bam".format(self.output_sample)
+    
+    cmd = " && ".join([svaba_cmd, sort_cmd, index_cmd])
 
     return cmd
     
