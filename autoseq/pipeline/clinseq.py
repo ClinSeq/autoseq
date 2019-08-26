@@ -371,6 +371,7 @@ class ClinseqPipeline(PypedreamPipeline):
                                "PB": "probio_biomarker_signature",
                                "PA": "pancancer",
                                "C2": "probio_comprehensive2",
+                               "C3": "probio_comprehensive3",
                                "PN": "pancancer2"
                                }
 

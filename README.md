@@ -6,7 +6,7 @@
 
 Each sample+preparation+capture item should have a corresponding barcode with the format `PROJECT-SDID-TYPE-SAMPLEID-PREPID-CAPTUREID` where:
 
-* `PROJECT` is a two-letter short project designator. One of `AL` (alascca), `LB` (liquid biopspy) and `OT` (other)
+* `PROJECT` is a two-letter short project designator. One of `AL` (alascca), `LB` (liquid biopspy), `PB` (ProBio), `PSFF` (PSFF) and `OT` (other)
 * `SDID` is an identifier for a single individual. It must match the pattern `P-[a-zA-Z0-9]+` (*NOTE:* This necessitates an additional "-" within this field).
 * `TYPE` is the sample type, one of `T` (tumor), `N` (normal) and `CFDNA` (ctDNA)
 * `SAMPLEID` identifies a single biological sample, for example piece of a tumor or a single tube of plasma. It must match the pattern `[a-zA-Z0-9]+`.
@@ -50,6 +50,7 @@ Autoseq knows about the following capture kits:
 * `PB` = `probio_biomarker_signature`
 * `PA` = `pancancer`
 * `C2` = `probio_comprehensive2`
+* `C3` = `probio_comprehensive3`
 * `PN` = `pancancer2`
 
 ## Runners
