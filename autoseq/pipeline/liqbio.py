@@ -115,6 +115,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svict.reference_sequence = self.refdata["reference_genome"]
         svict.output = "{}/svs/svict/{}-svict".format(self.outdir, sample_str)
         svict.output_vcf = "{}/svs/svict/{}-svict.vcf".format(self.outdir, sample_str)
+        svict.threads = self.maxcores
 
         self.add(svict)
 

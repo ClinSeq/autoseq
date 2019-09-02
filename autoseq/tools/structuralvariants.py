@@ -133,6 +133,7 @@ class SViCT(Job):
     self.output = None
     self.jobname = "svict-sv-calling"
     self.output_vcf = None
+    self.threads = None
         
   def command(self):
 
