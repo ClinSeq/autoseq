@@ -146,7 +146,7 @@ class StrelkaSomatic(Job):
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,
-                 target_bed=None, output=None, bamout=None, interval_list=None, output_filtered=None ):
+                 target_bed=None, output=None, bamout=None, interval_list=None, output_filtered=None, scratch="/tmp"):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -158,13 +158,15 @@ class Mutect2Somatic(Job):
         self.bamout = bamout
         self.interval_list = interval_list
         self.output_filtered = output_filtered
+        self.scratch = scratch
 
     def command(self):
         required("", self.input_tumor)
         required("", self.input_normal)
         required("", self.reference_sequence)
 
-        mutectsomatic_cmd = "gatk --java-options '-Xmx10g' Mutect2 " + \
+        mutectsomatic_cmd = "gatk --java-options '-Xmx10g -Djava.io.tmpdir=" + self.scratch + "'" + \
+                                    " Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
                                     " -I " + self.input_tumor + \
                                     " -I " + self.input_normal + \
@@ -175,7 +177,8 @@ class Mutect2Somatic(Job):
                                     " -bamout " + self.bamout + \
                                     " -O " + self.output
 
-        filter_mutect_calls = "gatk --java-options '-Xmx10g' FilterMutectCalls " + \
+        filter_mutect_calls = "gatk --java-options '-Xmx10g -Djava.io.tmpdir=" + self.scratch + "'" + \
+                                " ' FilterMutectCalls " + \
                                 " -R " +  self.reference_sequence + \
                                 " -V " + self.output + \
                                 " -O "  + self.output_filtered
@@ -470,7 +473,7 @@ class InstallVep(Job):
 
 def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, normal_capture,
                           target_name, outdir, callers=['vardict','strelka','mutect2', 'varscan'],
-                          min_alt_frac=0.1, min_num_reads=None):
+                          min_alt_frac=0.1, min_num_reads=None, scratch="/tmp"):
     """
     Configuring calling of somatic variants on a given pairing of cancer and normal bam files,
     using a set of specified algorithms.
@@ -548,7 +551,8 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           output="{}/variants/mutect/{}-{}-gatk-mutect-somatic.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
                           bamout="{}/variants/mutect/{}-{}-mutect.bam".format(outdir, normal_capture_str, cancer_capture_str),
                           interval_list=pipeline.refdata['targets'][capture_name]['targets-interval_list-slopped20'],
-                          output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str)
+                          output_filtered="{}/variants/mutect/{}-{}-gatk-mutect-somatic-filtered.vcf.gz".format(outdir, normal_capture_str, cancer_capture_str),
+                          scratch = scratch
                           )
         mutect_somatic.jobname = "mutect2-somatic/{}".format(cancer_capture_str)
         pipeline.add(mutect_somatic)

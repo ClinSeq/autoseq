@@ -458,7 +458,7 @@ class ClinseqPipeline(PypedreamPipeline):
             "{}/qc/picard/{}/{}-markdups-metrics.txt".format(
                 self.outdir, unique_capture.capture_kit_id, capture_str)
         markdups = PicardMarkDuplicates(
-            bamfile, mark_dups_bam_filename, mark_dups_metrics_filename)
+            bamfile, mark_dups_bam_filename, mark_dups_metrics_filename, scratch = self.scratch)
         markdups.is_intermediate = False
         self.add(markdups)
 
@@ -815,7 +815,8 @@ class ClinseqPipeline(PypedreamPipeline):
             target_name=target_name,
             outdir=self.outdir, callers=['vardict','strelka','mutect2','varscan'],
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
-            min_num_reads=self.get_job_param('vardict-min-num-reads'))
+            min_num_reads=self.get_job_param('vardict-min-num-reads'),
+            scratch=self.scratch)
 
         normal_capture_str = compose_lib_capture_str(normal_capture)
         cancer_capture_str = compose_lib_capture_str(cancer_capture)
