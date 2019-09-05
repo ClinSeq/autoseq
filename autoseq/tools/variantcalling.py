@@ -178,7 +178,7 @@ class Mutect2Somatic(Job):
                                     " -O " + self.output
 
         filter_mutect_calls = "gatk --java-options '-Xmx10g -Djava.io.tmpdir=" + self.scratch + "'" + \
-                                " ' FilterMutectCalls " + \
+                                " FilterMutectCalls " + \
                                 " -R " +  self.reference_sequence + \
                                 " -V " + self.output + \
                                 " -O "  + self.output_filtered
