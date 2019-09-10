@@ -9,7 +9,8 @@ class PicardCollectInsertSizeMetrics(Job):
         self.jobname = "picard-isize"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=8 CollectInsertSizeMetrics H=/dev/null" + \
+        return "picard -XX:ParallelGCThreads=8" + " -Djava.io.tmpdir=" + self.scratch + \
+               " CollectInsertSizeMetrics H=/dev/null" + \
                required("I=", self.input) + \
                required("O=", self.output_metrics)
 
@@ -42,7 +43,8 @@ class PicardCollectOxoGMetrics(Job):
         self.jobname = "picard-oxog"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=8 -Xmx2g CollectOxoGMetrics " + \
+        return "picard -XX:ParallelGCThreads=8 -Xmx2g " + required("-Djava.io.tmpdir=", self.scratch) + \
+               " CollectOxoGMetrics " + \
                required("I=", self.input) + \
                required("R=", self.reference_sequence) + \
                required("O=", self.output_metrics)
@@ -61,7 +63,8 @@ class PicardCollectHsMetrics(Job):
         self.jobname = "picard-hsmetrics"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=8 CollectHsMetrics " + \
+        return "picard -XX:ParallelGCThreads=8" + " -Djava.io.tmpdir=" + self.scratch + \
+               " CollectHsMetrics " + \
                required("I=", self.input) + \
                required("R=", self.reference_sequence) + \
                required("O=", self.output_metrics) + \
@@ -83,7 +86,8 @@ class PicardCollectWgsMetrics(Job):
         self.jobname = "picard-wgsmetrics"
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=8 CollectWgsMetrics " + \
+        return "picard -XX:ParallelGCThreads=8" + " -Djava.io.tmpdir=" + self.scratch + \
+               " CollectWgsMetrics " + \
                required("I=", self.input) + \
                required("R=", self.reference_sequence) + \
                required("O=", self.output_metrics) + \
@@ -121,16 +125,18 @@ class PicardBedToIntervalList(Job):
 
 
 class PicardMergeSamFiles(Job):
-    def __init__(self, input_bams, output_bam, assume_sorted=True, merge_dicts=True):
+    def __init__(self, input_bams, output_bam, assume_sorted=True, merge_dicts=True, scratch = "/tmp"):
         Job.__init__(self)
         self.input_bams = input_bams
         self.output_bam = output_bam
         self.assume_sorted = assume_sorted
         self.merge_dicts = merge_dicts
         self.jobname = "picard-mergesamfiles"
+        self.scratch = scratch
 
     def command(self):
-        return "picard -XX:ParallelGCThreads=8 MergeSamFiles " + \
+        return "picard -XX:ParallelGCThreads=8" + required("-Djava.io.tmpdir=", self.scratch) + \
+               " MergeSamFiles " + \
                repeat("INPUT=", self.input_bams) + \
                required("ASSUME_SORTED=", str(self.assume_sorted).lower()) + \
                required("MERGE_SEQUENCE_DICTIONARIES=", str(self.merge_dicts).lower()) + \

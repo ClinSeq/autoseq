@@ -44,11 +44,12 @@ class AlignUnmappedBam(Job):
 
 		bwa_cmd = "bwa mem -p -t {} {} /dev/stdin ".format(self.threads, self.reference_genome)
 
-		picard_merge_cmd = "picard -Xmx10g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
-							" O={} ".format(self.output_bam) + \
-							" R={} ".format(self.reference_genome) + \
-							" SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR CREATE_INDEX=true " + \
-							" TMP_DIR=".format(tmpdir)
+		picard_merge_cmd = "picard " + required("-Djava.io.tmpdir=", tmpdir) +\
+						   " -Xmx10g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
+						   " O={} ".format(self.output_bam) + \
+						   " R={} ".format(self.reference_genome) + \
+						   " SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR CREATE_INDEX=true " + \
+						   " TMP_DIR={}".format(tmpdir)
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
 
