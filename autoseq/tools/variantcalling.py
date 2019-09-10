@@ -13,12 +13,12 @@ class HaplotypeCaller(Job):
         self.reference_sequence = None
         self.dbSNP = None
         self.interval_list = None
-        self.java_options = "--java-options '-Xmx10g -Djava.io.tmpdir={}'"
+        self.java_options = '--java-options "-Djava.io.tmpdir={}" -Xmx10g'
         self.output = None
         self.jobname = "gatk-haplotype-germline"
 
     def command(self):
-        haplotypecaller_cmd = "gatk {} ".format(self.java_options.format(self.scratch)) +\
+        haplotypecaller_cmd = "gatk {}".format(self.java_options.format(self.scratch)) +\
                         " HaplotypeCaller " + \
                         required(" -R ", self.reference_sequence) + \
                         required(" -I ", self.input_bam) + \
