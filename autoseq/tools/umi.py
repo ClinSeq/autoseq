@@ -80,6 +80,7 @@ class CallDuplexConsensusReads(Job):
 		Job.__init__(self)
 		self.input_bam = None
 		self.output_bam = None
+		self.threads = 1
 
 	def command(self):
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
@@ -87,6 +88,7 @@ class CallDuplexConsensusReads(Job):
 		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
+			  " --threads " + self.threads + \
 			  " --min-reads 1 1 0 --min-input-base-quality 30 "
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
