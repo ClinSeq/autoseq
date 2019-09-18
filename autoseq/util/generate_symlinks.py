@@ -115,7 +115,7 @@ class GenerateSymlink():
             snp_resource = ""
             snp_bam_panel = ""
             snp_vep = ""
-            for track_type, each_track in [('bam_common', 'bam_nodups'), ('snps', 'bam_cfdna'), ('snps', 'bam_normal'), ('snps', 'vep')]:
+            for track_type, each_track in [('snps', 'bam_cfdna'), ('snps', 'bam_normal'), ('snps', 'vep')]:
 
                 for each_file in igv_session_files[track_type][each_track]:
                     full_path = igvnav_dir + '/' + each_file
