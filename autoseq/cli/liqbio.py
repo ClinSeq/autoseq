@@ -49,7 +49,7 @@ def liqbio(ctx, sample):
     print("Generate IGV Nav")
     create_symlinks = GenerateSymlink(ctx.obj['outdir'])
     create_symlinks.generateIGVsymlink()
-    create_symlinks.create_igv_session_file()
+    create_symlinks.create_igv_session_file(ctx.obj['outdir'])
     ###################################
     sys.exit(ctx.obj['pipeline'].exitcode)
 
