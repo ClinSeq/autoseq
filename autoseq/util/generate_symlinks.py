@@ -144,7 +144,10 @@ class GenerateSymlink():
                 for each_file in igv_session_files[track_type][each_track]:
 
                     full_path = igvnav_dir + '/' + each_file
-                    if not os.path.exists(full_path) or not os.path.getsize(full_path):
+                    if not os.path.exists(full_path) :
+                        continue
+
+                    if not os.path.getsize(full_path):
                         continue
 
                     #sv_resource += resource_path.format(path_name=full_path)
