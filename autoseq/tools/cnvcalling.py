@@ -106,9 +106,11 @@ class LiqbioCNAPlot(Job):
         
         # activating conda env
         activate_cmd = "source activate liqbiocna-env"
+        activate_interactive_cmd = "source activate flanken"
         
         # running liqbioCNA.R
-        running_cmd = "liqbioCNA.R" + \
+        #running_cmd = "liqbioCNA.R" + \
+        running_cmd = " " + \         
         required("--tumor_cnr ", self.input_tumor_cnr) + \
         required("--tumor_cns ", self.input_tumor_cns) + \
         required("--normal_cnr ", self.input_normal_cnr) + \
@@ -132,11 +134,16 @@ class LiqbioCNAPlot(Job):
         required("--plot_png_normal ", self.output_plot_png_normal) + \
         required("--cna_json ", self.output_cna_json) + \
         required("--purity_json ", self.output_purity_json)
+
+        #run static franken plot
+        run_static_franken_plot = "liqbioCNA.R" + running_cmd
+        #run interactive franken plot
+        run_interactive_franken_plot = "liqbioCNA_Interactive_plots.R" + running_cmd
         
         # deactivating the conda env
         deactivate_cmd = "conda deactivate"
 
-        return " && ".join([activate_cmd, running_cmd, deactivate_cmd])
+        return " && ".join([activate_cmd, run_static_franken_plot, deactivate_cmd, activate_interactive_cmd, run_interactive_franken_plot, deactivate_cmd])
 
 
 class CNVkit(Job):
