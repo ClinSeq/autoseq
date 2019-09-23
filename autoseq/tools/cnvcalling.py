@@ -110,7 +110,7 @@ class LiqbioCNAPlot(Job):
         
         # running liqbioCNA.R
         #running_cmd = "liqbioCNA.R" + \
-        running_cmd = " " + \         
+        running_cmd = " " + \
         required("--tumor_cnr ", self.input_tumor_cnr) + \
         required("--tumor_cns ", self.input_tumor_cns) + \
         required("--normal_cnr ", self.input_normal_cnr) + \
