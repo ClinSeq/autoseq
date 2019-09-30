@@ -88,7 +88,7 @@ class CallDuplexConsensusReads(Job):
 		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
-			  " --threads " + self.threads + \
+			  " --threads " + str(self.threads) + \
 			  " --min-reads 1 1 0 --min-input-base-quality 30 "
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
