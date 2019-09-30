@@ -6,6 +6,7 @@ click=6.7
 cnvkit=0.7.9
 cryptography=1.8.1
 fastqc=0.11.4
+fgbio=1.0.0
 freebayes=1.0.1
 htslib=1.6
 igvtools=2.3.93

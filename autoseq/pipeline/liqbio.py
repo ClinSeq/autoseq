@@ -361,6 +361,7 @@ class LiqBioPipeline(ClinseqPipeline):
         call_consensus_reads.scratch = self.scratch
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
         call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
+        call_consensus_reads.threads = self.maxcores
         self.add(call_consensus_reads)
 
         return call_consensus_reads.output_bam
