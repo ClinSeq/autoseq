@@ -171,6 +171,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svaba = Svaba()
         svaba.input_normal = normal_bam
         svaba.input_tumor = cancer_bam
+        svaba.scratch = self.scratch
         svaba.reference_sequence = self.refdata["bwaIndex"]
         svaba.threads = self.maxcores
         svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20-gz']
@@ -195,6 +196,7 @@ class LiqBioPipeline(ClinseqPipeline):
 
 
         lumpy = Lumpy()
+        lumpy.scratch = self.scratch
         lumpy.input_normal = normal_bam
         lumpy.input_tumor = cancer_bam
         lumpy.normal_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir, normal_capture_str)

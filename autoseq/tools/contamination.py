@@ -21,6 +21,7 @@ class CreateContestVCFs(Job):
                required(" ", self.input_target_regions_bed_1) + \
                required(" ", self.input_target_regions_bed_2) + \
                required(" ", self.input_population_vcf) + \
+               required("--tmpdir ", self.scratch) + \
                required("--output-filename ", self.output)
 
 
@@ -39,7 +40,8 @@ class ContEst(Job):
     def command(self):
         min_genotype_ratio = "0.95"
 
-        return "java -Xmx15g -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar -T ContEst " + \
+        return "java -Xmx15g " + required("-Djava.io.tmpdir=", self.scratch) +\
+            " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar -T ContEst " + \
             required("-R ", self.reference_genome) + \
             required("-I:eval ", self.input_eval_bam) + \
             required("-I:genotype ", self.input_genotype_bam) + \

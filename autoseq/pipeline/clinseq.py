@@ -84,7 +84,7 @@ class ClinseqPipeline(PypedreamPipeline):
         :param kwargs: Additional key-word arguments.
         :param umi: Flag which can be used for umi-liqbio pipeline.
         """
-        PypedreamPipeline.__init__(self, normpath(outdir), **kwargs)
+        PypedreamPipeline.__init__(self, normpath(outdir), scratch=scratch, **kwargs)
         self.sampledata = sampledata
         self.refdata = refdata
         # FIXME: Introduced a simple dictionary for configuring various pipeline job parameters.
@@ -428,7 +428,7 @@ class ClinseqPipeline(PypedreamPipeline):
         # Configure merging:
         merged_bam_filename = \
             "{}/bams/{}/{}.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
-        merge_bams = PicardMergeSamFiles(input_bams, merged_bam_filename)
+        merge_bams = PicardMergeSamFiles(input_bams, merged_bam_filename, scratch=self.scratch)
         merge_bams.is_intermediate = True
         merge_bams.jobname = "picard-mergebams-{}".format(capture_str)
         self.add(merge_bams)
@@ -530,6 +530,7 @@ class ClinseqPipeline(PypedreamPipeline):
         capture_str = compose_lib_capture_str(normal_capture)
 
         haplotypecaller = HaplotypeCaller()
+        haplotypecaller.scratch = self.scratch
         haplotypecaller.input_bam = bam
         haplotypecaller.reference_sequence = self.refdata['reference_genome']
         haplotypecaller.interval_list = self.refdata['targets'][targets]['targets-interval_list-slopped20']
@@ -551,7 +552,8 @@ class ClinseqPipeline(PypedreamPipeline):
 
         self.add(strelka_germline)
 
-        merge_germline_vcfs = MergeVCF() 
+        merge_germline_vcfs = MergeVCF()
+        merge_germline_vcfs.scratch = self.scratch
         merge_germline_vcfs.input_vcf_hc = haplotypecaller.output
         merge_germline_vcfs.input_vcf_strelka = strelka_germline.output_filtered_vcf
         merge_germline_vcfs.reference_genome = self.refdata['reference_genome']
@@ -822,6 +824,7 @@ class ClinseqPipeline(PypedreamPipeline):
         cancer_capture_str = compose_lib_capture_str(cancer_capture)
 
         somatic_seq = SomaticSeq()
+        somatic_seq.scratch = self.scratch
         somatic_seq.input_normal = normal_bam
         somatic_seq.input_tumor = cancer_bam
         somatic_seq.reference_sequence = self.refdata['reference_genome']
@@ -1026,6 +1029,7 @@ class ClinseqPipeline(PypedreamPipeline):
             self.outdir, normal_capture_str, cancer_capture_str)
         contest_vcf_generation.jobname = "contest_pop_vcf_{}-{}".format(
             normal_capture_str, cancer_capture_str)
+        contest_vcf_generation.scratch = self.scratch
         self.add(contest_vcf_generation)
         return contest_vcf_generation.output
 
@@ -1046,6 +1050,7 @@ class ClinseqPipeline(PypedreamPipeline):
         contest.input_eval_bam = self.get_capture_bam(library_capture_1, umi=False)
         contest.input_genotype_bam = self.get_capture_bam(library_capture_2, umi=False)
         contest.input_population_af_vcf = contest_vcf
+        contest.scratch = self.scratch
         # TODO: Is it necessary to create the output subdir contamination somewhere? Check how it's done for e.g. cnvkit.
         contest.output = "{}/contamination/{}.contest.txt".format(self.outdir, compose_lib_capture_str(library_capture_1)) # TODO: Should the analysis id also be in name of out file?
         contest.jobname = "contest_tumor/{}".format(compose_lib_capture_str(library_capture_1))  # TODO: Is it ok that the job name does not contain analysis id, i.e. may not be unique?
@@ -1230,6 +1235,7 @@ class ClinseqPipeline(PypedreamPipeline):
         wgsmetrics.reference_sequence = self.refdata['reference_genome']
         wgsmetrics.output_metrics = "{}/qc/picard/wgs/{}.picard-wgsmetrics.txt".format(self.outdir, wgs_name)
         wgsmetrics.jobname = "picard-wgsmetrics-{}".format(wgs_name)
+        wgsmetrics.scratch = self.scratch
         self.add(wgsmetrics)
 
         qc_files += [isize.output_metrics, wgsmetrics.output_metrics]
@@ -1303,6 +1309,7 @@ class ClinseqPipeline(PypedreamPipeline):
         capture_str = compose_lib_capture_str(unique_capture)
 
         isize = PicardCollectInsertSizeMetrics()
+        isize.scratch = self.scratch
         isize.input = bam
         isize.output_metrics = "{}/qc/picard/{}/{}.picard-insertsize.txt".format(
             self.outdir, unique_capture.capture_kit_id, capture_str)
@@ -1310,6 +1317,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.add(isize)
 
         oxog = PicardCollectOxoGMetrics()
+        oxog.scratch = self.scratch
         oxog.input = bam
         oxog.reference_sequence = self.refdata['reference_genome']
         oxog.output_metrics = "{}/qc/picard/{}/{}.picard-oxog.txt".format(
@@ -1319,6 +1327,7 @@ class ClinseqPipeline(PypedreamPipeline):
 
         hsmetrics = PicardCollectHsMetrics()
         hsmetrics.input = bam
+        hsmetrics.scratch = self.scratch
         hsmetrics.reference_sequence = self.refdata['reference_genome']
         hsmetrics.target_regions = self.refdata['targets'][targets][
             'targets-interval_list-slopped20']
