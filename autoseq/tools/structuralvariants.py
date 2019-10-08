@@ -184,6 +184,8 @@ class Lumpy(Job):
     self.jobname = "lumpy-sv-calling"
 
   def command(self):
+    
+    tmpdir = "{}/lumpy-{}".format(self.scratch, uuid.uuid4())
 
     discordant_cmd = ("samtools view -@ {threads} -b -F 1294 {n_bam} > {n_discordants} " + \
                     " && samtools view -@ {threads} -b -F 1294 {t_bam} > {t_discordants}").format(
@@ -206,7 +208,7 @@ class Lumpy(Job):
                    )
     lumpy_cmd = ("lumpyexpress -T {tempdir} -B {t_bam},{n_bam} -S {t_splitters},{n_splitters} " + \
                 " -D {t_discordants},{n_discordants} -o {output}").format(
-                          tempdir=self.scratch,
+                          tempdir=tmpdir,
                           threads = self.threads,
                           n_bam = self.input_normal,
                           t_bam = self.input_tumor,
