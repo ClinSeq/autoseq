@@ -13,7 +13,7 @@ class HaplotypeCaller(Job):
         self.reference_sequence = None
         self.dbSNP = None
         self.interval_list = None
-        self.java_options = '--java-options "-Djava.io.tmpdir={}" -Xmx10g'
+        self.java_options = '--java-options "-Djava.io.tmpdir={} -Xmx10g"'
         self.output = None
         self.jobname = "gatk-haplotype-germline"
 
