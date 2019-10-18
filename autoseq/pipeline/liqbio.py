@@ -2,6 +2,7 @@ from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
 from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT, Svaba, Lumpy, GenerateIGVNavInputSV
+from autoseq.tools.structuralvariants import AnnotateSvaba
 from autoseq.tools.umi import *
 from autoseq.tools.alignment import fq_trimming, Realignment
 from autoseq.util.library import find_fastqs
@@ -53,6 +54,11 @@ class LiqBioPipeline(ClinseqPipeline):
 
         # Configure MultiQC:
         self.configure_multi_qc()
+        
+        # Configure QC overview plot
+        for normal_capture in self.get_mapped_captures_normal():
+            for cancer_capture in self.get_mapped_captures_cancer():
+                self.configure_qc_overview_plot(normal_capture, cancer_capture)
 
     def configure_single_capture_analysis_liqbio(self, unique_capture):
         input_bam = self.get_capture_bam(unique_capture, umi=False)
@@ -88,6 +94,20 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.set_capture_sveffect(unique_capture, sveffect.output_effects_json)
 
+        svcaller_igvinput = GenerateIGVNavInputSV()
+        svcaller_igvinput.input_del_gtf = self.capture_to_results[unique_capture].svs["DEL"][1]
+        svcaller_igvinput.input_dup_gtf = self.capture_to_results[unique_capture].svs["DUP"][1]
+        svcaller_igvinput.input_inv_gtf = self.capture_to_results[unique_capture].svs["INV"][1]
+        svcaller_igvinput.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
+        svcaller_igvinput.input_vcf = "{}/svs/".format(self.outdir)
+        svcaller_igvinput.sdid = sample_str
+        svcaller_igvinput.tool = 'svcaller'
+        svcaller_igvinput.output = "{}/svs/igv/".format(self.outdir)
+        svcaller_igvinput.jobname = "generate-igvnav-input-svcaller-" + sample_str
+
+        self.add(svcaller_igvinput)
+
+
     def configure_panel_analyses_liqbio(self, umi):
         # Configure liqbio analyses to be run on all unique panel captures individually:
         for unique_capture in self.get_mapped_captures_no_wgs():
@@ -110,6 +130,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svict.reference_sequence = self.refdata["reference_genome"]
         svict.output = "{}/svs/svict/{}-svict".format(self.outdir, sample_str)
         svict.output_vcf = "{}/svs/svict/{}-svict.vcf".format(self.outdir, sample_str)
+        svict.threads = self.maxcores
 
         self.add(svict)
 
@@ -173,17 +194,28 @@ class LiqBioPipeline(ClinseqPipeline):
         svaba.output_germline = "{}/svs/svaba/{}-{}.svaba.germline.sv.vcf".format(self.outdir, normal_capture_str, cancer_capture_str)
 
         self.add(svaba)
-        
+
+        annotate_svaba = {}
         svaba_igvinput = {}
 
         for vcftype in ['germline', 'somatic']:
+            annotate_svaba[vcftype] = AnnotateSvaba()
+            annotate_svaba[vcftype].input_vcf = svaba.output_somatic if vcftype == 'somatic' else svaba.output_germline
+            annotate_svaba[vcftype].output_vcf = "{}/svs/svaba/{}-{}.svaba.{}.annotated.sv.vcf".format(self.outdir, 
+                                                                                            normal_capture_str, 
+                                                                                            cancer_capture_str,
+                                                                                            vcftype)
+            annotate_svaba[vcftype].jobname = "annotate-svtype-svaba-" + vcftype
+
+            self.add(annotate_svaba[vcftype])
+
             svaba_igvinput[vcftype] = GenerateIGVNavInputSV()
-            svaba_igvinput[vcftype].input_vcf = svaba.output_somatic if vcftype == 'somatic' else svaba.output_germline
+            svaba_igvinput[vcftype].input_vcf = annotate_svaba[vcftype].output_vcf
             svaba_igvinput[vcftype].sdid = cancer_capture.sdid
             svaba_igvinput[vcftype].tool = 'svaba'
             svaba_igvinput[vcftype].vcftype = vcftype
             svaba_igvinput[vcftype].output = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
-            svaba_igvinput[vcftype].jobname = "generate-igvnav-input-svaba" + vcftype
+            svaba_igvinput[vcftype].jobname = "generate-igvnav-input-svaba-" + vcftype
 
             self.add(svaba_igvinput[vcftype])
 
@@ -208,6 +240,16 @@ class LiqBioPipeline(ClinseqPipeline):
         lumpy_igvinput.jobname = "generate-igvnav-input-lumpy"
 
         self.add(lumpy_igvinput)
+
+        annotate_sv = GenerateIGVNavInputSV()
+        annotate_sv.input_vcf = "{}/svs/igv/".format(self.outdir)
+        annotate_sv.input_mut = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+        annotate_sv.annot_bed = self.refdata['genes_bed']
+        annotate_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
+        annotate_sv.output = "{}/svs/igv/{}-{}-sv-annotated.txt".format(self.outdir, normal_capture_str, cancer_capture_str)
+        annotate_sv.jobname = "annotate-strutural-variant"
+
+        self.add(annotate_sv)
 
 
     def configure_liqbio_cna(self, normal_capture, cancer_capture):
