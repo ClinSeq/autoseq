@@ -1,4 +1,4 @@
-from pypedream.job import Job, required
+from pyjobmanager.job import Job, required
 
 
 class BwaIndex(Job):

@@ -1,4 +1,4 @@
-from pypedream.job import Job, required, optional, conditional
+from pyjobmanager.job import Job, required, optional, conditional
 
 
 class Svcaller(Job):
@@ -13,8 +13,6 @@ class Svcaller(Job):
         self.jobname = "svcaller-run-all"
 
     def command(self):
-        
-        activate_env_cmd = "source activate svcallerenv "
 
         run_all_cmd = ("svcaller run-all --tmp-dir {scratch} " +
                       "--event-type {event_type} " +
@@ -29,12 +27,8 @@ class Svcaller(Job):
                           input_bam=self.input_bam,
                       )
 
-        deactivate_env_cmd = "source deactivate"
-
-        return "{} && {} && {}".format(
-            activate_env_cmd,
-            run_all_cmd,
-            deactivate_env_cmd,
+        return "{}".format(
+            run_all_cmd
         )
 
 class Sveffect(Job):
@@ -53,7 +47,6 @@ class Sveffect(Job):
 
     def command(self):
         
-        activate_env_cmd = "source activate svcallerenv "
         make_bed_cmd = ("sveffect make-bed " +
                        "--del-gtf {del_gtf} " +
                        "--dup-gtf {dup_gtf} " +
@@ -79,13 +72,10 @@ class Sveffect(Job):
                           combined_effects_bed=self.output_combined_bed,
                       )
 
-        deactivate_env_cmd = "source deactivate"
 
-        return "{} && {} && {} && {}".format(
-            activate_env_cmd,
+        return "{} && {}".format(
             make_bed_cmd,
             predict_cmd,
-            deactivate_env_cmd,
         )
 
 class MantaSomaticSV(Job):

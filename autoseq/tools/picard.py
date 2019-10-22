@@ -1,4 +1,4 @@
-from pypedream.job import Job, required, optional, repeat, conditional
+from pyjobmanager.job import Job, required, optional, repeat, conditional
 import uuid
 
 class PicardCollectInsertSizeMetrics(Job):

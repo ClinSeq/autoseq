@@ -1,7 +1,7 @@
 import os
 import uuid
 
-from pypedream.job import Job, required, conditional
+from pyjobmanager.job import Job, required, conditional
 
 
 class CompileMetadata(Job):

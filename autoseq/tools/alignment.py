@@ -1,5 +1,5 @@
-from pypedream.job import *
-from pypedream.tools.unix import Cat
+from pyjobmanager.job import *
+from pyjobmanager.tools.unix import Cat
 
 from autoseq.util.path import normpath
 from autoseq.util.clinseq_barcode import *

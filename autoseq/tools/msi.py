@@ -1,5 +1,5 @@
 import uuid
-from pypedream.job import required, Job, conditional
+from pyjobmanager.job import required, Job, conditional
 
 
 class MsiSensor(Job):

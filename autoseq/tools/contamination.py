@@ -1,4 +1,4 @@
-from pypedream.job import required, Job, conditional, optional
+from pyjobmanager.job import required, Job, conditional, optional
 
 __author__ = 'rebber'
 

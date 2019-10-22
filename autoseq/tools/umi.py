@@ -2,7 +2,7 @@ import logging
 import sys
 import uuid
 
-from pypedream.job import Job, repeat, required, optional, conditional
+from pyjobmanager.job import Job, repeat, required, optional, conditional
 
 class FastqToBam(Job):
 	def __init__(self):

@@ -3,7 +3,7 @@ General utilities which return static command line strings.
 """
 
 # ## General utilities
-from pypedream.job import conditional
+from pyjobmanager.job import conditional
 
 
 def vt_split_and_leftaln(reference_sequence, allow_ref_mismatches=False):

@@ -2,7 +2,7 @@ import logging
 import os
 import uuid
 
-from pypedream.job import Job, repeat, required, optional, conditional, stripsuffix
+from pyjobmanager.job import Job, repeat, required, optional, conditional, stripsuffix
 
 
 class QDNASeq(Job):

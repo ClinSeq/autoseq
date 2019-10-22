@@ -1,4 +1,5 @@
-from pypedream.pipeline.pypedreampipeline import PypedreamPipeline
+from functools import reduce
+from pyjobmanager.pipeline.pypedreampipeline import PypedreamPipeline
 from autoseq.util.path import normpath, stripsuffix
 from autoseq.tools.alignment import align_library, Realignment
 from autoseq.tools.cnvcalling import Cns2Seg, CNVkit, CNVkitFix, QDNASeq
@@ -311,8 +312,8 @@ class ClinseqPipeline(PypedreamPipeline):
         """
 
         non_wgs_unique_captures = self.get_mapped_captures_no_wgs()
-        return filter(lambda unique_capture: unique_capture.sample_type == "N",
-                      non_wgs_unique_captures)
+        return list(filter(lambda unique_capture: unique_capture.sample_type == "N",
+                      non_wgs_unique_captures))
 
     def get_mapped_captures_cancer(self):
         """
@@ -323,8 +324,8 @@ class ClinseqPipeline(PypedreamPipeline):
         """
     
         non_wgs_unique_captures = self.get_mapped_captures_no_wgs()
-        return filter(lambda unique_capture: unique_capture.sample_type != "N",
-                      non_wgs_unique_captures)
+        return list(filter(lambda unique_capture: unique_capture.sample_type != "N",
+                      non_wgs_unique_captures))
 
     def get_prep_kit_name(self, prep_kit_code):
         """
@@ -390,7 +391,7 @@ class ClinseqPipeline(PypedreamPipeline):
             self.sampledata['T'] + \
             self.sampledata['N'] + \
             self.sampledata['CFDNA']
-        return filter(lambda bc: bc != None, all_clinseq_barcodes)
+        return list(filter(lambda bc: bc != None, all_clinseq_barcodes))
 
     def get_unique_capture_to_clinseq_barcodes(self):
         """
@@ -566,7 +567,7 @@ class ClinseqPipeline(PypedreamPipeline):
             vep_germline_vcf.input_vcf = merge_germline_vcfs.output_vcf
             vep_germline_vcf.threads = self.maxcores
             vep_germline_vcf.reference_sequence = self.refdata['reference_genome']
-            vep_germline_vcf.vep_dir = self.refdata['vep_dir']
+            vep_germline_vcf.vep_dir = "/nfs/PROBIO/autoseq-genome/vep" #temporary change self.refdata['vep_dir'] (vinay)
             vep_germline_vcf.brca_exchange_vcf = self.refdata['brca_exchange']
             vep_germline_vcf.output_vcf = "{}/variants/{}.all.germline.vep.vcf".format(self.outdir, capture_str)
             vep_germline_vcf.jobname = "vep-merged-germline-vcf-{}".format(capture_str)
@@ -664,7 +665,7 @@ class ClinseqPipeline(PypedreamPipeline):
         if 'cnvkit-ref' in self.refdata['targets'][capture_kit_name]:
             # Retrieve the first (in arbitrary order) reference available for this capture kit,
             # as a fall-back:
-            cnvkit.reference = self.refdata['targets'][capture_kit_name]['cnvkit-ref'].values()[0].values()[0]
+            cnvkit.reference = list(list(self.refdata['targets'][capture_kit_name]['cnvkit-ref'].values())[0].values())[0]
         try:
             # Try to get a more specific reference, if it available:
             cnvkit.reference = self.refdata['targets'][capture_kit_name]['cnvkit-ref'][library_kit_name][sample_type]

@@ -1,4 +1,4 @@
-from pypedream.job import required, Job
+from pyjobmanager.job import required, Job
 
 
 class SlopIntervalList(Job):

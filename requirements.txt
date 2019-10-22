@@ -2,10 +2,11 @@ pydotplus
 pytest-cov
 genomicassertions>=0.2.5
 multiqc==1.0
-
-git+https://github.com/dakl/localq.git
-git+https://github.com/ClinSeq/pypedream.git
-git+https://github.com/ClinSeq/reportgen.git
-git+https://github.com/ClinSeq/referral-manager.git
-git+https://github.com/ClinSeq/multiqc-alascca.git
+openpyxl
+#git+https://github.com/vinaykaikala/pyjobmanager.git
+#git+https://github.com/dakl/localq.git
+#git+https://github.com/ClinSeq/pypedream.git
+#git+https://github.com/ClinSeq/reportgen.git
+#git+https://github.com/ClinSeq/referral-manager.git
+#git+https://github.com/ClinSeq/multiqc-alascca.git
 

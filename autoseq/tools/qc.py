@@ -1,5 +1,5 @@
 import os
-from pypedream.job import Job, required, optional, conditional, repeat
+from pyjobmanager.job import Job, required, optional, conditional, repeat
 
 
 class HeterzygoteConcordance(Job):

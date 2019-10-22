@@ -2,7 +2,7 @@ import logging
 import sys
 import uuid
 
-from pypedream.job import Job, repeat, required, optional, conditional
+from pyjobmanager.job import Job, repeat, required, optional, conditional
 from autoseq.util.clinseq_barcode import *
 from autoseq.util.vcfutils import vt_split_and_leftaln, fix_ambiguous_cl, remove_dup_cl
 
@@ -41,7 +41,6 @@ class StrelkaGermline(Job):
     def command(self):
         required("", self.input_bam)
         required("", self.reference_sequence)
-
         # configuration
         configure_strelkagermline = "configureStrelkaGermlineWorkflow.py " + \
                                     " --bam " + self.input_bam + \
@@ -53,8 +52,11 @@ class StrelkaGermline(Job):
         filter_passed_variants = "zcat " + self.output_dir + "/results/variants/variants.vcf.gz" + \
                                 " | awk 'BEGIN { OFS = \"\\t\"} /^#/ { print $0 } {if($7==\"PASS\") print $0 }' " + \
                                 " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_filtered_vcf)
+
+        #strelka causing error: vinay
+        return "echo done" 
         
-        return " && ".join([cmd, filter_passed_variants])
+        #return " && ".join(["source activate autoseq_py27", cmd,  filter_passed_variants, 'source activate base'])
 
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -416,11 +418,15 @@ class MergeVCF(Job):
                 " -T CombineVariants " + \
                 " -R " + self.reference_genome + \
                 " --variant:haplotypecaller " + self.input_vcf_hc + \
-                " --variant:strelka " + self.input_vcf_strelka + \
                 " -genotypeMergeOptions PRIORITIZE " + \
-                " -priority haplotypecaller,strelka " + \
+                " -priority haplotypecaller" + \
                 " | bgzip > {} ".format(self.output_vcf)
+
+
+    #comneted by vinay this option is modifed fixed once strelka works " -priority haplotypecaller,strelka " + \ 
     
+    # comment by vinay add this option after fixing strelka  " --variant:strelka " + self.input_vcf_strelka
+
     tabix_vcf = "tabix -p vcf {} ".format(self.output_vcf)
 
     return " && ".join([merge_vcf, tabix_vcf])

@@ -1,0 +1,8 @@
+fastqc=0.11.4
+pandas
+pybedtools=0.8.0
+# need to have pip version 9.0.3 #pip install git+https://github.com/tomwhi/svcaller.git
+#pip install cnvkit
+#cnvkit require: R --vanilla --quiet -e 'install.packages("BiocManager",  repo="http://cran.rstudio.com/")' -e 'BiocManager::install("DNAcopy", dependencies = TRUE)'
+#install strelka with python27 in conda env autoseq_py27
+#eval "$(conda shell.bash hook)" -> activate conda env inside the bash script 

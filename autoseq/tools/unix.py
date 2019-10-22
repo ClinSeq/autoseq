@@ -1,4 +1,4 @@
-from pypedream.job import Job, required, optional
+from pyjobmanager.job import Job, required, optional
 
 
 # case class bwaIndex(ref:File) extends ExternalCommonArgs with  SingleCoreJob with OneDayJob {

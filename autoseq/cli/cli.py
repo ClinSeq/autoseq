@@ -4,13 +4,13 @@ import os
 import signal
 
 import click
-from pypedream import runners
+from pyjobmanager import runners
 
-from .alascca import alascca as alascca_cmd
+#from .alascca import alascca as alascca_cmd
 from .liqbio import liqbio as liqbio_cmd
 from .liqbio import liqbio_prepare as liqbio_prepare_cmd
 
-__author__ = 'dankle'
+__author__ = 'dankle; vinaykaikala'
 
 
 @click.group()
@@ -94,7 +94,7 @@ def convert_to_absolute_path(possible_relative_path, base_path):
             if os.path.isfile(joined_path) or os.path.isdir(joined_path):
                 converted_value = joined_path
 
-    except Exception, e:
+    except Exception as e:
         pass
 
     return converted_value
@@ -141,7 +141,7 @@ def load_ref(ref):
 
 def get_runner(runner_name, maxcores):
     try:
-        module = __import__("pypedream.runners." + runner_name, fromlist="runners")
+        module = __import__("pyjobmanager.runners." + runner_name, fromlist="runners")
         runner_class = getattr(module, runner_name.title())
 
         if runner_name == 'localqrunner':
@@ -150,11 +150,11 @@ def get_runner(runner_name, maxcores):
             runner = runner_class()
         return runner
     except ImportError:
-        print "Couldn't find runner " + runner_name + ". Available Runners:"
+        print ("Couldn't find runner " + runner_name + ". Available Runners:")
         import inspect
         for name, obj in inspect.getmembers(runners):
             if name != "runner" and "runner" in name:
-                print "- " + name
+                print ("- " + name)
         raise ImportError
 
 
@@ -172,6 +172,6 @@ def setup_logging(loglevel="INFO"):
     logging.info("Started log with loglevel %(loglevel)s" % {"loglevel": loglevel})
 
 
-cli.add_command(alascca_cmd)
+#cli.add_command(alascca_cmd)
 cli.add_command(liqbio_cmd)
 cli.add_command(liqbio_prepare_cmd)

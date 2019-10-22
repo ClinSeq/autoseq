@@ -1,4 +1,4 @@
-from pypedream.job import Job, required, optional, conditional
+from pyjobmanager.job import Job, required, optional, conditional
 
 
 # FIXME: Could be adapted so it's possible to run directly from bam files, instead of using pre-calculated segments

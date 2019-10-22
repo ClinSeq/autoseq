@@ -3,8 +3,8 @@ import logging
 import re
 
 import sys
-from pypedream.pipeline.pypedreampipeline import PypedreamPipeline
-from pypedream.runners.shellrunner import Shellrunner
+from pyjobmanager.pipeline.pypedreampipeline import PypedreamPipeline
+from pyjobmanager.runners.shellrunner import Shellrunner
 
 from autoseq.tools.genes import FilterGTFChromosomes, GTF2GenePred, FilterGTFGenes
 from autoseq.tools.indexing import BwaIndex, SamtoolsFaidx, GenerateChrSizes

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from pip.req import parse_requirements
+from pip._internal.req import parse_requirements
 
 # parse_requirements() returns generator of pip.req.InstallRequirement objects
 install_reqs = parse_requirements("requirements.txt", session=False)
@@ -8,7 +8,7 @@ install_reqs = parse_requirements("requirements.txt", session=False)
 reqs = [str(ir.req) for ir in install_reqs if ir.req is not None]
 
 setup(name='autoseq',
-      version='0.6.5',
+      version='1.0.0',
       packages=find_packages(exclude=('tests*', 'docs', 'examples')),
       install_requires=reqs,
       entry_points={
