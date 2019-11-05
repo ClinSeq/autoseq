@@ -14,6 +14,7 @@ from autoseq.tools.contamination import ContEst, ContEstToContamCaveat, CreateCo
 from autoseq.tools.qc import *
 from autoseq.util.clinseq_barcode import *
 import collections, logging
+from os.path import dirname
 
 
 class InvalidRefDataException(Exception):
@@ -83,7 +84,7 @@ class ClinseqPipeline(PypedreamPipeline):
         :param kwargs: Additional key-word arguments.
         :param umi: Flag which can be used for umi-liqbio pipeline.
         """
-        PypedreamPipeline.__init__(self, normpath(outdir), **kwargs)
+        PypedreamPipeline.__init__(self, normpath(outdir), scratch=scratch, **kwargs)
         self.sampledata = sampledata
         self.refdata = refdata
         # FIXME: Introduced a simple dictionary for configuring various pipeline job parameters.
@@ -370,6 +371,7 @@ class ClinseqPipeline(PypedreamPipeline):
                                "PB": "probio_biomarker_signature",
                                "PA": "pancancer",
                                "C2": "probio_comprehensive2",
+                               "C3": "probio_comprehensive3",
                                "PN": "pancancer2"
                                }
 
@@ -426,7 +428,7 @@ class ClinseqPipeline(PypedreamPipeline):
         # Configure merging:
         merged_bam_filename = \
             "{}/bams/{}/{}.bam".format(self.outdir, unique_capture.capture_kit_id, capture_str)
-        merge_bams = PicardMergeSamFiles(input_bams, merged_bam_filename)
+        merge_bams = PicardMergeSamFiles(input_bams, merged_bam_filename, scratch=self.scratch)
         merge_bams.is_intermediate = True
         merge_bams.jobname = "picard-mergebams-{}".format(capture_str)
         self.add(merge_bams)
@@ -456,7 +458,7 @@ class ClinseqPipeline(PypedreamPipeline):
             "{}/qc/picard/{}/{}-markdups-metrics.txt".format(
                 self.outdir, unique_capture.capture_kit_id, capture_str)
         markdups = PicardMarkDuplicates(
-            bamfile, mark_dups_bam_filename, mark_dups_metrics_filename)
+            bamfile, mark_dups_bam_filename, mark_dups_metrics_filename, scratch = self.scratch)
         markdups.is_intermediate = False
         self.add(markdups)
 
@@ -528,6 +530,7 @@ class ClinseqPipeline(PypedreamPipeline):
         capture_str = compose_lib_capture_str(normal_capture)
 
         haplotypecaller = HaplotypeCaller()
+        haplotypecaller.scratch = self.scratch
         haplotypecaller.input_bam = bam
         haplotypecaller.reference_sequence = self.refdata['reference_genome']
         haplotypecaller.interval_list = self.refdata['targets'][targets]['targets-interval_list-slopped20']
@@ -549,7 +552,8 @@ class ClinseqPipeline(PypedreamPipeline):
 
         self.add(strelka_germline)
 
-        merge_germline_vcfs = MergeVCF() 
+        merge_germline_vcfs = MergeVCF()
+        merge_germline_vcfs.scratch = self.scratch
         merge_germline_vcfs.input_vcf_hc = haplotypecaller.output
         merge_germline_vcfs.input_vcf_strelka = strelka_germline.output_filtered_vcf
         merge_germline_vcfs.reference_genome = self.refdata['reference_genome']
@@ -813,12 +817,14 @@ class ClinseqPipeline(PypedreamPipeline):
             target_name=target_name,
             outdir=self.outdir, callers=['vardict','strelka','mutect2','varscan'],
             min_alt_frac=self.get_job_param('vardict-min-alt-frac'),
-            min_num_reads=self.get_job_param('vardict-min-num-reads'))
+            min_num_reads=self.get_job_param('vardict-min-num-reads'),
+            scratch=self.scratch)
 
         normal_capture_str = compose_lib_capture_str(normal_capture)
         cancer_capture_str = compose_lib_capture_str(cancer_capture)
 
         somatic_seq = SomaticSeq()
+        somatic_seq.scratch = self.scratch
         somatic_seq.input_normal = normal_bam
         somatic_seq.input_tumor = cancer_bam
         somatic_seq.reference_sequence = self.refdata['reference_genome']
@@ -1023,6 +1029,7 @@ class ClinseqPipeline(PypedreamPipeline):
             self.outdir, normal_capture_str, cancer_capture_str)
         contest_vcf_generation.jobname = "contest_pop_vcf_{}-{}".format(
             normal_capture_str, cancer_capture_str)
+        contest_vcf_generation.scratch = self.scratch
         self.add(contest_vcf_generation)
         return contest_vcf_generation.output
 
@@ -1043,6 +1050,7 @@ class ClinseqPipeline(PypedreamPipeline):
         contest.input_eval_bam = self.get_capture_bam(library_capture_1, umi=False)
         contest.input_genotype_bam = self.get_capture_bam(library_capture_2, umi=False)
         contest.input_population_af_vcf = contest_vcf
+        contest.scratch = self.scratch
         # TODO: Is it necessary to create the output subdir contamination somewhere? Check how it's done for e.g. cnvkit.
         contest.output = "{}/contamination/{}.contest.txt".format(self.outdir, compose_lib_capture_str(library_capture_1)) # TODO: Should the analysis id also be in name of out file?
         contest.jobname = "contest_tumor/{}".format(compose_lib_capture_str(library_capture_1))  # TODO: Is it ok that the job name does not contain analysis id, i.e. may not be unique?
@@ -1227,6 +1235,7 @@ class ClinseqPipeline(PypedreamPipeline):
         wgsmetrics.reference_sequence = self.refdata['reference_genome']
         wgsmetrics.output_metrics = "{}/qc/picard/wgs/{}.picard-wgsmetrics.txt".format(self.outdir, wgs_name)
         wgsmetrics.jobname = "picard-wgsmetrics-{}".format(wgs_name)
+        wgsmetrics.scratch = self.scratch
         self.add(wgsmetrics)
 
         qc_files += [isize.output_metrics, wgsmetrics.output_metrics]
@@ -1255,6 +1264,25 @@ class ClinseqPipeline(PypedreamPipeline):
         multiqc.jobname = "multiqc-{}".format(self.sampledata['sdid'])
         self.add(multiqc)
 
+    def configure_qc_overview_plot(self, normal_capture, cancer_capture):
+        # get the sample names of interest
+        samples_of_interest = [compose_lib_capture_str(unique_capture) for unique_capture in
+                               [normal_capture, cancer_capture]]
+        
+        # configure the job
+        qcoverview = QcOverviewPlot()
+        qcoverview.input_picard_files = self.qc_files
+        qcoverview.input_contest_tumor = self.normal_cancer_pair_to_results[
+            (normal_capture, cancer_capture)].cancer_contest_output
+        qcoverview.input_contest_normal = self.normal_cancer_pair_to_results[
+            (normal_capture, cancer_capture)].normal_contest_output
+        qcoverview.samples_of_interest = samples_of_interest
+        qcoverview.analysis_dir = self.outdir
+        qcoverview.output = "{}/qc/{}.qc_overview.pdf".format(self.outdir, "_".join(samples_of_interest))
+        qcoverview.mainpath = dirname(dirname(self.outdir.rstrip("/")))  # use directory two levels up as main directory to search for QC files
+        qcoverview.jobname = "QC_overview_plot_" + "_".join(samples_of_interest)
+        self.add(qcoverview)
+        
     def get_coverage_bed(self, targets):
         """
         Retrieve the targets bed file to use for calculating coverage, given the specified
@@ -1281,6 +1309,7 @@ class ClinseqPipeline(PypedreamPipeline):
         capture_str = compose_lib_capture_str(unique_capture)
 
         isize = PicardCollectInsertSizeMetrics()
+        isize.scratch = self.scratch
         isize.input = bam
         isize.output_metrics = "{}/qc/picard/{}/{}.picard-insertsize.txt".format(
             self.outdir, unique_capture.capture_kit_id, capture_str)
@@ -1288,6 +1317,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.add(isize)
 
         oxog = PicardCollectOxoGMetrics()
+        oxog.scratch = self.scratch
         oxog.input = bam
         oxog.reference_sequence = self.refdata['reference_genome']
         oxog.output_metrics = "{}/qc/picard/{}/{}.picard-oxog.txt".format(
@@ -1297,6 +1327,7 @@ class ClinseqPipeline(PypedreamPipeline):
 
         hsmetrics = PicardCollectHsMetrics()
         hsmetrics.input = bam
+        hsmetrics.scratch = self.scratch
         hsmetrics.reference_sequence = self.refdata['reference_genome']
         hsmetrics.target_regions = self.refdata['targets'][targets][
             'targets-interval_list-slopped20']

@@ -17,7 +17,7 @@ class FastqToBam(Job):
 
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} ".format(tmpdir) + \
+		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} ".format(tmpdir) + \
 			" FastqToBam " + \
 			" -i {}  {} ".format(self.input_fastq1, self.input_fastq2)  + \
 			" -o " + self.output_bam + \
@@ -44,11 +44,12 @@ class AlignUnmappedBam(Job):
 
 		bwa_cmd = "bwa mem -p -t {} {} /dev/stdin ".format(self.threads, self.reference_genome)
 
-		picard_merge_cmd = "picard -Xmx10g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
-							" O={} ".format(self.output_bam) + \
-							" R={} ".format(self.reference_genome) + \
-							" SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR CREATE_INDEX=true " + \
-							" TMP_DIR=".format(tmpdir)
+		picard_merge_cmd = "picard " + required("-Djava.io.tmpdir=", tmpdir) +\
+						   " -Xmx10g MergeBamAlignment UNMAPPED={} ALIGNED=/dev/stdin".format(self.input_bam) + \
+						   " O={} ".format(self.output_bam) + \
+						   " R={} ".format(self.reference_genome) + \
+						   " SO=coordinate ALIGNER_PROPER_PAIR_FLAGS=true MAX_GAPS=-1 ORIENTATIONS=FR CREATE_INDEX=true " + \
+						   " TMP_DIR={}".format(tmpdir)
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
 
@@ -66,7 +67,7 @@ class GroupReadsByUmi(Job):
 
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} GroupReadsByUmi ".format(tmpdir) + \
+		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} GroupReadsByUmi ".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
 			  " --strategy paired --family-size-histogram " + self.output_histogram
@@ -80,13 +81,15 @@ class CallDuplexConsensusReads(Job):
 		Job.__init__(self)
 		self.input_bam = None
 		self.output_bam = None
+		self.threads = 1
 
 	def command(self):
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
+		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} CallDuplexConsensusReads".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
+			  " --threads " + str(self.threads) + \
 			  " --min-reads 1 1 0 --min-input-base-quality 30 "
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
@@ -103,7 +106,7 @@ class FilterConsensusReads(Job):
 	def command(self):
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} FilterConsensusReads".format(tmpdir) + \
+		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} FilterConsensusReads".format(tmpdir) + \
 		      " -i {}".format(self.input_bam) + \
 		      " -o " + self.output_bam + \
 		      " --ref " + self.reference_genome + \
@@ -125,7 +128,7 @@ class ClipBam(Job):
 	def command(self):
 		tmpdir = "{}/{}".format(self.scratch, uuid.uuid4())
 
-		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:+AggressiveHeap -XX:ParallelGCThreads=8 --tmp-dir {} ClipBam ".format(tmpdir) + \
+		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} ClipBam ".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
 			  " -m " + self.metrics_txt + \
