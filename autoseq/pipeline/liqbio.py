@@ -1,7 +1,8 @@
 from autoseq.pipeline.clinseq import ClinseqPipeline
 from autoseq.tools.cnvcalling import LiqbioCNAPlot
 from autoseq.util.clinseq_barcode import *
-from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV, SViCT, Svaba, Lumpy, GenerateIGVNavInputSV
+from autoseq.tools.structuralvariants import Svcaller, Sveffect, MantaSomaticSV
+from autoseq.tools.structuralvariants import SViCT, Svaba, Lumpy, GenerateIGVNavInputSV, Gridss
 from autoseq.tools.structuralvariants import AnnotateSvaba
 from autoseq.tools.umi import *
 from autoseq.tools.alignment import fq_trimming, Realignment
@@ -113,13 +114,30 @@ class LiqBioPipeline(ClinseqPipeline):
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
             self.configure_svict(unique_capture)
+            self.configure_gridss(unique_capture)
 
         # Configure a liqbio analyses for each normal-cancer pairing:
         for normal_capture in self.get_mapped_captures_normal():
             for cancer_capture in self.get_mapped_captures_cancer():
                 self.configure_panel_analysis_cancer_vs_normal_liqbio(
                     normal_capture, cancer_capture, umi)
-    
+
+    def configure_gridss(self, unique_capture):
+        input_bam = self.get_capture_bam(unique_capture, umi=False)
+        sample_str = compose_lib_capture_str(unique_capture)
+
+        gridss = Gridss()
+        gridss.input_bam = input_bam
+        gridss.reference_sequence = self.refdata['bwaIndex']
+        gridss.assembly = "{}/svs/gridss/{}-assembly.bam".format(self.outdir, sample_str)
+        gridss.steps = " ALL "
+        gridss.workingdir = "{}/svs/gridss/".format(self.outdir)
+        gridss.output = "{}/svs/gridss/{}-gridss.vcf.gz".format(self.outdir, sample_str)
+        gridss.threads = self.maxcores
+        gridss.jobname = "gridss-sv-calling-{}".format(sample_str)
+
+        self.add(gridss)
+
     def configure_svict(self, unique_capture):
 
         input_bam = self.get_capture_bam(unique_capture, umi=False)
@@ -142,7 +160,6 @@ class LiqBioPipeline(ClinseqPipeline):
         svict_igvinput.jobname = "generate-igvnav-input-svict"
 
         self.add(svict_igvinput)
-
 
     def configure_manta(self, normal_capture, cancer_capture):
         """
@@ -186,7 +203,6 @@ class LiqBioPipeline(ClinseqPipeline):
         svaba = Svaba()
         svaba.input_normal = normal_bam
         svaba.input_tumor = cancer_bam
-        svaba.scratch = self.scratch
         svaba.reference_sequence = self.refdata["bwaIndex"]
         svaba.threads = self.maxcores
         svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20-gz']
@@ -222,7 +238,6 @@ class LiqBioPipeline(ClinseqPipeline):
 
 
         lumpy = Lumpy()
-        lumpy.scratch = self.scratch
         lumpy.input_normal = normal_bam
         lumpy.input_tumor = cancer_bam
         lumpy.normal_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir, normal_capture_str)
@@ -399,7 +414,6 @@ class LiqBioPipeline(ClinseqPipeline):
         call_consensus_reads.scratch = self.scratch
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
         call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
-        call_consensus_reads.threads = self.maxcores
         self.add(call_consensus_reads)
 
         return call_consensus_reads.output_bam
