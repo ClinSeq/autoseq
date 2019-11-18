@@ -1,5 +1,5 @@
 from pypedream.job import Job, required, optional, conditional
-
+import uuid
 
 class Svcaller(Job):
     def __init__(self):
@@ -165,7 +165,8 @@ class Svaba(Job):
               output_sample = self.output_sample
               )
     
-    sort_cmd = "samtools sort {}.contigs.bam -o {}.contigs.sort.bam".format(self.output_sample, self.output_sample)
+    sort_cmd = "samtools sort -T " + self.scratch + \
+               "{}.contigs.bam -o {}.contigs.sort.bam".format(self.output_sample, self.output_sample)
     
     index_cmd = "samtools index {}.contigs.sort.bam".format(self.output_sample)
     
@@ -189,6 +190,8 @@ class Lumpy(Job):
 
   def command(self):
 
+    tmpdir = "{}/lumpy-{}".format(self.scratch, uuid.uuid4())
+
     discordant_cmd = ("samtools view -@ {threads} -b -F 1294 {n_bam} > {n_discordants} " + \
                     " && samtools view -@ {threads} -b -F 1294 {t_bam} > {t_discordants}").format(
                           threads = self.threads,
@@ -208,8 +211,9 @@ class Lumpy(Job):
                           n_splitters = self.normal_splitters,
                           t_splitters = self.tumor_splitters
                    )
-    lumpy_cmd = ("lumpyexpress -B {t_bam},{n_bam} -S {t_splitters},{n_splitters} " + \
+    lumpy_cmd = ("lumpyexpress -T {tempdir} -B {t_bam},{n_bam} -S {t_splitters},{n_splitters} " + \
                 " -D {t_discordants},{n_discordants} -o {output}").format(
+                          tempdir=tmpdir,
                           threads = self.threads,
                           n_bam = self.input_normal,
                           t_bam = self.input_tumor,
