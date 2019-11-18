@@ -55,6 +55,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         self.prepare_intervals()
         self.prepare_variants()
 
+
         fetch_vep_cache = InstallVep()
         fetch_vep_cache.output_dir = "{}/vep/".format(self.outdir)
         #self.add(fetch_vep_cache)
@@ -339,6 +340,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         self.reference_data['genesGtf'] = filt_ensembl_gtf_chrs.output
         self.reference_data['genesGenePred'] = gtf2genepred_ensembl.output
         self.reference_data['genesGtfGenesOnly'] = filt_genes_ensembl_gtf_genes.output
+        self.reference_data['genes_bed'] = copy_genes_bed.output
 
     def prepare_reference_genome(self):
         genome_unzipped = stripsuffix(os.path.basename(self.input_reference_sequence), ".gz")
