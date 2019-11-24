@@ -265,10 +265,10 @@ class LiqBioPipeline(ClinseqPipeline):
         annotate_sv.input_svaba_germline = svaba_igvinput['germline'].output_mut
         annotate_sv.input_svaba_somatic = svaba_igvinput['somatic'].output_mut
         annotate_sv.input_lumpy = lumpy_igvinput.output_mut
-        annotate_sv.input_svict_normal = "{}/svs/igv/{}-{}_svict_SR8.mut".format(self.outdir, normal_capture_str)
-        annotate_sv.input_svict_cancer = "{}/svs/igv/{}-{}_svict_SR8.mut".format(self.outdir, cancer_capture_str)
-        annotate_sv.input_svcaller_normal = "{}/svs/igv/{}-{}_svcaller.mut".format(self.outdir, normal_capture_str)
-        annotate_sv.input_svcaller_cancer = "{}/svs/igv/{}-{}_svcaller.mut".format(self.outdir, cancer_capture_str)
+        annotate_sv.input_svict_normal = "{}/svs/igv/{}_svict_SR8.mut".format(self.outdir, normal_capture_str)
+        annotate_sv.input_svict_cancer = "{}/svs/igv/{}_svict_SR8.mut".format(self.outdir, cancer_capture_str)
+        annotate_sv.input_svcaller_normal = "{}/svs/igv/{}_svcaller.mut".format(self.outdir, normal_capture_str)
+        annotate_sv.input_svcaller_cancer = "{}/svs/igv/{}_svcaller.mut".format(self.outdir, cancer_capture_str)
         annotate_sv.annot_bed = self.refdata['genes_bed']
         annotate_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
         annotate_sv.output = "{}/svs/igv/{}-{}-sv-annotated.txt".format(self.outdir, normal_capture_str, cancer_capture_str)
