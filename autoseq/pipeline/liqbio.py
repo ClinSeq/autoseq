@@ -203,7 +203,6 @@ class LiqBioPipeline(ClinseqPipeline):
         svaba = Svaba()
         svaba.input_normal = normal_bam
         svaba.input_tumor = cancer_bam
-        svaba.scratch = self.scratch
         svaba.reference_sequence = self.refdata["bwaIndex"]
         svaba.threads = self.maxcores
         svaba.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20-gz']
@@ -233,13 +232,13 @@ class LiqBioPipeline(ClinseqPipeline):
             svaba_igvinput[vcftype].tool = 'svaba'
             svaba_igvinput[vcftype].vcftype = vcftype
             svaba_igvinput[vcftype].output = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+            svaba_igvinput[vcftype].output_mut = "{}/svs/igv/{}-{}_{}_svaba.mut".format(self.outdir, normal_capture_str, cancer_capture_str, vcftype)
             svaba_igvinput[vcftype].jobname = "generate-igvnav-input-svaba-" + vcftype
 
             self.add(svaba_igvinput[vcftype])
 
 
         lumpy = Lumpy()
-        lumpy.scratch = self.scratch
         lumpy.input_normal = normal_bam
         lumpy.input_tumor = cancer_bam
         lumpy.normal_discordants = "{}/svs/lumpy/{}-discordants.bam".format(self.outdir, normal_capture_str)
@@ -256,13 +255,20 @@ class LiqBioPipeline(ClinseqPipeline):
         lumpy_igvinput.sdid = cancer_capture.sdid
         lumpy_igvinput.tool = 'lumpy'
         lumpy_igvinput.output = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+        lumpy_igvinput.output_mut = "{}/svs/igv/{}-{}_lumpy_len500_SU24.mut".format(self.outdir, normal_capture_str, cancer_capture_str)
         lumpy_igvinput.jobname = "generate-igvnav-input-lumpy"
 
         self.add(lumpy_igvinput)
 
         annotate_sv = GenerateIGVNavInputSV()
         annotate_sv.input_vcf = "{}/svs/igv/".format(self.outdir)
-        annotate_sv.input_mut = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
+        annotate_sv.input_svaba_germline = svaba_igvinput['germline'].output_mut
+        annotate_sv.input_svaba_somatic = svaba_igvinput['somatic'].output_mut
+        annotate_sv.input_lumpy = lumpy_igvinput.output_mut
+        annotate_sv.input_svict_normal = "{}/svs/igv/{}-{}_svict_SR8.mut".format(self.outdir, normal_capture_str)
+        annotate_sv.input_svict_cancer = "{}/svs/igv/{}-{}_svict_SR8.mut".format(self.outdir, cancer_capture_str)
+        annotate_sv.input_svcaller_normal = "{}/svs/igv/{}-{}_svcaller.mut".format(self.outdir, normal_capture_str)
+        annotate_sv.input_svcaller_cancer = "{}/svs/igv/{}-{}_svcaller.mut".format(self.outdir, cancer_capture_str)
         annotate_sv.annot_bed = self.refdata['genes_bed']
         annotate_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
         annotate_sv.output = "{}/svs/igv/{}-{}-sv-annotated.txt".format(self.outdir, normal_capture_str, cancer_capture_str)
@@ -414,7 +420,6 @@ class LiqBioPipeline(ClinseqPipeline):
         call_consensus_reads = CallDuplexConsensusReads()
         call_consensus_reads.input_bam = group_reads.output_bam
         call_consensus_reads.scratch = self.scratch
-        call_consensus_reads.threads = self.maxcores
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
         call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
         self.add(call_consensus_reads)
