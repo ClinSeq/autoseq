@@ -145,6 +145,7 @@ class QcOverviewPlot(Job):
         self.input_picard_files = None
         self.input_contest_tumor = None
         self.input_contest_normal = None
+        self.input_msings = None
         self.samples_of_interest = None
         self.analysis_dir = None
         self.output = None

@@ -1276,6 +1276,7 @@ class ClinseqPipeline(PypedreamPipeline):
             (normal_capture, cancer_capture)].cancer_contest_output
         qcoverview.input_contest_normal = self.normal_cancer_pair_to_results[
             (normal_capture, cancer_capture)].normal_contest_output
+        qcoverview.input_msings = self.capture_to_results[cancer_capture].msings_output
         qcoverview.samples_of_interest = samples_of_interest
         qcoverview.analysis_dir = self.outdir
         qcoverview.output = "{}/qc/{}.qc_overview.pdf".format(self.outdir, "_".join(samples_of_interest))
