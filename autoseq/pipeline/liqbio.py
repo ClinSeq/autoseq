@@ -310,6 +310,7 @@ class LiqBioPipeline(ClinseqPipeline):
         align_unmap_bam.reference_genome = self.refdata['bwaIndex']
         align_unmap_bam.threads = self.maxcores
         align_unmap_bam.scratch = self.scratch
+        align_unmap_bam.is_intermediate = True
         align_unmap_bam.output_bam = "{}/bams/{}/{}.mapped-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         align_unmap_bam.jobname = "alignment-of-unmapped-bam-"+ jobname + '-' + clinseq_barcode
         self.add(align_unmap_bam)
@@ -325,6 +326,7 @@ class LiqBioPipeline(ClinseqPipeline):
         realignment.known_indel1 = self.refdata['1KG']
         realignment.known_indel2 = self.refdata['Mills_and_1KG_gold_standard']
         realignment.target_intervals = "{}/bams/{}/{}.intervals".format(self.outdir, capture_kit, clinseq_barcode)
+        realignment.is_intermediate = True
         realignment.jobname = "realignment-" + jobname + '-' + clinseq_barcode
         self.add(realignment)
 
@@ -342,6 +344,7 @@ class LiqBioPipeline(ClinseqPipeline):
         fastq_to_bam.sample = sample
         fastq_to_bam.library = library
         fastq_to_bam.scratch = self.scratch
+        fastq_to_bam.is_intermediate = True
         fastq_to_bam.output_bam = "{}/bams/{}/{}.unmapped.bam".format(self.outdir, capture_kit, clinseq_barcode)
         fastq_to_bam.jobname = "fastq-to-bam" + '-' + clinseq_barcode
         self.add(fastq_to_bam)
@@ -353,8 +356,9 @@ class LiqBioPipeline(ClinseqPipeline):
         group_reads = GroupReadsByUmi()
         group_reads.input_bam = bam
         group_reads.scratch = self.scratch
-        group_reads.output_histogram = "{}/bams/{}/{}.grouped.bam.fs.txt".format(self.outdir, capture_kit, clinseq_barcode)
+        group_reads.histogram = "{}/bams/{}/{}.grouped.bam.fs.txt".format(self.outdir, capture_kit, clinseq_barcode)
         group_reads.output_bam = "{}/bams/{}/{}.grouped.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        group_reads.is_intermediate = True
         group_reads.jobname = "group-reads-by-umi" + '-' + clinseq_barcode
         self.add(group_reads)
 
@@ -362,6 +366,7 @@ class LiqBioPipeline(ClinseqPipeline):
         call_consensus_reads.input_bam = group_reads.output_bam
         call_consensus_reads.scratch = self.scratch
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        call_consensus_reads.is_intermediate = True
         call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
         call_consensus_reads.threads = self.maxcores
         self.add(call_consensus_reads)

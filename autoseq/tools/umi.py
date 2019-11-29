@@ -60,7 +60,7 @@ class GroupReadsByUmi(Job):
 		Job.__init__(self)
 		self.input_bam = None
 		self.output_bam = None
-		self.output_histogram = None
+		self.histogram = None
 		
 
 	def command(self):
@@ -70,7 +70,7 @@ class GroupReadsByUmi(Job):
 		cmd = "fgbio -Xmx10g -XX:+AggressiveOpts -XX:ParallelGCThreads=8 --tmp-dir {} GroupReadsByUmi ".format(tmpdir) + \
 			  " -i " + self.input_bam + \
 			  " -o " + self.output_bam + \
-			  " --strategy paired --family-size-histogram " + self.output_histogram
+			  " --strategy paired --family-size-histogram " + self.histogram
 
 		rm_tmpdir = "rm -rf {} ".format(tmpdir)
 
