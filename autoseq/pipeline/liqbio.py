@@ -426,7 +426,7 @@ class LiqBioPipeline(ClinseqPipeline):
         call_consensus_reads = CallDuplexConsensusReads()
         call_consensus_reads.input_bam = group_reads.output_bam
         call_consensus_reads.scratch = self.scratch
-        call_consensus_reads.threads = self.maxcore
+        call_consensus_reads.threads = self.maxcores
         call_consensus_reads.output_bam = "{}/bams/{}/{}.consensus.bam".format(self.outdir, capture_kit, clinseq_barcode)
         call_consensus_reads.is_intermediate = True
         call_consensus_reads.jobname = "call-duplex-consensus-reads" + '-' + clinseq_barcode
