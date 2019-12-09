@@ -56,6 +56,8 @@ class GenerateSymlink():
                      ('sv', 'mut_svict_cfdna', '.*-CFDNA-.*.svict_SR8.mut$'),
                      ('sv', 'mut_svict_normal', '^(?:(?!CFDNA).)*.svict_SR8.mut$'),
                      ('sv', 'mut_sava','.*_(germline|somatic)_svaba.mut$'),
+                     ('sv', 'mut_svcaller_cfdna', '.*-CFDNA-.*_svcaller.mut$'),
+                     ('sv', 'mut_svcaller_normal', '^(?:(?!CFDNA).)*_svcaller.mut$'),
                      ('sv', 'mut_lumpy', '.*lumpy_len500_SU24.mut$'),
                      ('sv', 'gtf_cfdna', '.*-CFDNA-.*(DEL|DUP|INV|TRA).gtf$'),
                      ('sv', 'gtf_normal', '^(?:(?!CFDNA).)*(DEL|DUP|INV|TRA).gtf$'),
@@ -133,7 +135,9 @@ class GenerateSymlink():
             #session file for structural variants
             all_sv_files=[('bam_common', 'bam_nodups'),('sv', 'bam_cfdna'), ('sv', 'bam_normal'),
                      ('sv', 'mut_svict_cfdna'), ('sv', 'mut_svict_normal'),
-                     ('sv', 'mut_sava'), ('sv', 'mut_lumpy'), ('sv', 'gtf_cfdna'),
+                     ('sv', 'mut_sava'),  ('sv', 'mut_svcaller_cfdna'),
+                     ('sv', 'mut_svcaller_normal'),
+                     ('sv', 'mut_lumpy'), ('sv', 'gtf_cfdna'),
                      ('sv', 'gtf_normal')]
 
             sv_resource= ""

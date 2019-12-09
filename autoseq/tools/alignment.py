@@ -126,6 +126,7 @@ class Realignment(Job):
                             " -known " + self.known_indel2 + \
                             " -allowPotentiallyMisencodedQuals " + \
                             " --maxReadsForRealignment 5000000 " + \
+                            " --maxReadsInMemory 1000000 " + \
                             " -I " + self.input_bam + \
                             " -o " + self.output_bam
 
