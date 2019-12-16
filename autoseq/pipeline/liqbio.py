@@ -102,6 +102,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svcaller_igvinput.input_tra_gtf = self.capture_to_results[unique_capture].svs["TRA"][1]
         svcaller_igvinput.input_vcf = "{}/svs/".format(self.outdir)
         svcaller_igvinput.sdid = sample_str
+        svcaller_igvinput.vcftype = 'normal' if '-N-'in sample_str else 'somatic'
         svcaller_igvinput.tool = 'svcaller'
         svcaller_igvinput.output = "{}/svs/igv/".format(self.outdir)
         svcaller_igvinput.jobname = "generate-igvnav-input-svcaller-" + sample_str
@@ -155,6 +156,7 @@ class LiqBioPipeline(ClinseqPipeline):
         svict_igvinput = GenerateIGVNavInputSV()
         svict_igvinput.input_vcf = svict.output_vcf
         svict_igvinput.sdid = unique_capture.sdid
+        svict_igvinput.vcftype = 'normal' if '-N-'in sample_str else 'somatic'
         svict_igvinput.tool = 'svict'
         svict_igvinput.output = "{}/svs/igv/{}".format(self.outdir, sample_str)
         svict_igvinput.jobname = "generate-igvnav-input-svict"
@@ -256,6 +258,7 @@ class LiqBioPipeline(ClinseqPipeline):
         lumpy_igvinput.input_vcf = lumpy.output
         lumpy_igvinput.sdid = cancer_capture.sdid
         lumpy_igvinput.tool = 'lumpy'
+        lumpy_igvinput.vcftype = 'somatic'
         lumpy_igvinput.output = "{}/svs/igv/{}-{}".format(self.outdir, normal_capture_str, cancer_capture_str)
         lumpy_igvinput.output_mut = "{}/svs/igv/{}-{}_lumpy_len500_SU24.mut".format(self.outdir, normal_capture_str, cancer_capture_str)
         lumpy_igvinput.jobname = "generate-igvnav-input-lumpy"
