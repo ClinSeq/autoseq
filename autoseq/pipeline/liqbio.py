@@ -139,6 +139,16 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.add(gridss)
 
+        gridss_igvinput = GenerateIGVNavInputSV()
+        gridss_igvinput.input_vcf = gridss.output
+        gridss_igvinput.sdid = unique_capture.sdid
+        gridss_igvinput.vcftype = 'normal' if '-N-'in sample_str else 'somatic'
+        gridss_igvinput.tool = 'gridss'
+        gridss_igvinput.output = "{}/svs/igv/{}".format(self.outdir, sample_str)
+        gridss_igvinput.jobname = "generate-igvnav-input-gridss"
+
+        self.add(gridss_igvinput)
+
     def configure_svict(self, unique_capture):
 
         input_bam = self.get_capture_bam(unique_capture, umi=False)
@@ -274,6 +284,8 @@ class LiqBioPipeline(ClinseqPipeline):
         annotate_sv.input_svict_cancer = "{}/svs/igv/{}_svict_SR8.mut".format(self.outdir, cancer_capture_str)
         annotate_sv.input_svcaller_normal = "{}/svs/igv/{}_svcaller.mut".format(self.outdir, normal_capture_str)
         annotate_sv.input_svcaller_cancer = "{}/svs/igv/{}_svcaller.mut".format(self.outdir, cancer_capture_str)
+        annotate_sv.input_gridss_normal = "{}/svs/igv/{}_pass_gridss.mut".format(self.outdir, normal_capture_str)
+        annotate_sv.input_gridss_cancer = "{}/svs/igv/{}_pass_gridss.mut".format(self.outdir, cancer_capture_str)
         annotate_sv.annot_bed = self.refdata['genes_bed']
         annotate_sv.target_bed = self.refdata['targets'][target_name]['targets-bed-slopped20']
         annotate_sv.output = "{}/svs/igv/{}-{}-sv-annotated.txt".format(self.outdir, normal_capture_str, cancer_capture_str)
