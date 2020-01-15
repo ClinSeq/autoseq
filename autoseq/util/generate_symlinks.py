@@ -98,7 +98,7 @@ class GenerateSymlink():
             <Track clazz="org.broad.igv.track.FeatureTrack" color="0,0,178" fontSize="10" id="{gtf_file_full_path}" name="{gtf_file_path}" visible="true"/>
         """
         sv_mut_track_str="""
-                <Track clazz="org.broad.igv.track.MutationTrack" color="0,0,178" colorScale="ContinuousColorScale;0.0;12.0;255,255,255;0,0,178" fontSize="10" height="15" id="{mut_file_full_path}" name="{mut_file_path}" visible="true"/>
+                <Track clazz="org.broad.igv.track.MutationTrack" color="0,0,178" colorScale="ContinuousColorScale;0.0;12.0;255,255,255;0,0,178" fontSize="10" height="15" id="{mut_file_full_path}_{id_field}" name="{id_field}" visible="true"/>
         """
         snp_vcf = """
             <Track clazz="org.broad.igv.variant.VariantTrack" color="0,0,178" displayMode="EXPANDED" fontSize="10" id="{vcf_full_file_path}" name="{vcf_file_path}" siteColorMode="ALLELE_FREQUENCY" squishedHeight="1" visible="true"/>
@@ -162,8 +162,18 @@ class GenerateSymlink():
                         sv_bam_panel += panel_str.format(panel_height=150, panel_width=2543, panel_name=each_file, tracks=sv_bam_track)
 
                     if each_track.startswith('mut'):
+                        # get content of SDID column to append to id and name fields in the track
+                        f = open(full_path, 'r')
+                        line = f.readline() # skip the header line
+                        line = f.readline()  # get the first variant line
+                        f.close()
+                        if line:
+                            id_field = line.strip().split()[3]  # use the 4th column (SDID column) if there is a variant
+                        else:
+                            continue  # skip the file if there are no variants
+                        
                         sv_resource += resource_path.format(path_name=full_path)
-                        sv_mut_track += sv_mut_track_str.format(mut_file_full_path=full_path, mut_file_path=each_file)
+                        sv_mut_track += sv_mut_track_str.format(mut_file_full_path=full_path, id_field=id_field)
 
                     if each_track.startswith('gtf'):
                         sv_resource += resource_path.format(path_name=full_path)
