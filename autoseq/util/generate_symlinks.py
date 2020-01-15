@@ -86,7 +86,7 @@ class GenerateSymlink():
         </Panel>
         """
         tracks_bam_str= """
-        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="175,175,175" colorScale="ContinuousColorScale;0.0;927.0;255,255,255;175,175,175" fontSize="10" id="{bam_file_full}_coverage" name="{bam_file} Coverage" snpThreshold="0.2" visible="true">
+        <Track autoScale="true" clazz="org.broad.igv.sam.CoverageTrack" color="175,175,175" colorScale="ContinuousColorScale;0.0;927.0;255,255,255;175,175,175" fontSize="10" id="{bam_file_full}_coverage" name="{bam_file} Coverage" snpThreshold="0.0001" visible="true">
             <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1503.0" minimum="0.0" type="LINEAR"/>
         </Track>
         <Track clazz="org.broad.igv.sam.SpliceJunctionTrack" fontSize="10" height="60" id="{bam_file_full}_junctions" name="{bam_file} Junctions" visible="false"/>
