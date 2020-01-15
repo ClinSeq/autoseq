@@ -35,6 +35,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         self.mills_and_1000g_gold_standard = "{}/Mills_and_1000G_gold_standard.indels.b37.vcf.gz".format(genome_resources)
         self.brca_exchange = "{}/BrcaExchangeClinvar_15Jan2019_v26_hg19.vcf.gz".format(genome_resources)
         self.oncokb = "{}/OncoKB_6Mar19_v1.9.txt".format(genome_resources)
+        self.genes_bed = "{}/human_grch37_87.bed".format(genome_resources)
         self.outdir = outdir
         self.maxcores = maxcores
         self.reference_data = dict()
@@ -53,6 +54,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         self.prepare_sveffect_regions()
         self.prepare_intervals()
         self.prepare_variants()
+
 
         fetch_vep_cache = InstallVep()
         fetch_vep_cache.output_dir = "{}/vep/".format(self.outdir)
@@ -309,6 +311,10 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         curl_ensembl_gtf.is_intermediate = True
         self.add(curl_ensembl_gtf)
 
+        copy_genes_bed = Copy(input_file=self.genes_bed,
+                                    output_file="{}/genes/{}".format(self.outdir, os.path.basename(self.genes_bed)))
+        self.add(copy_genes_bed)
+
         gunzip_ensembl_gtf = Gunzip()
         gunzip_ensembl_gtf.input = curl_ensembl_gtf.output
         gunzip_ensembl_gtf.output = stripsuffix(curl_ensembl_gtf.output, ".gz")
@@ -334,6 +340,7 @@ class GenerateRefFilesPipeline(PypedreamPipeline):
         self.reference_data['genesGtf'] = filt_ensembl_gtf_chrs.output
         self.reference_data['genesGenePred'] = gtf2genepred_ensembl.output
         self.reference_data['genesGtfGenesOnly'] = filt_genes_ensembl_gtf_genes.output
+        self.reference_data['genes_bed'] = copy_genes_bed.output
 
     def prepare_reference_genome(self):
         genome_unzipped = stripsuffix(os.path.basename(self.input_reference_sequence), ".gz")

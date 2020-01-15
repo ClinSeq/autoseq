@@ -1,7 +1,6 @@
 from pypedream.job import Job, required, optional, conditional
 import uuid
 
-
 class Svcaller(Job):
     def __init__(self):
         Job.__init__(self)
@@ -37,6 +36,7 @@ class Svcaller(Job):
             run_all_cmd,
             deactivate_env_cmd,
         )
+
 
 class Sveffect(Job):
     def __init__(self):
@@ -89,6 +89,7 @@ class Sveffect(Job):
             deactivate_env_cmd,
         )
 
+
 class MantaSomaticSV(Job):
     def __init__(self):
         Job.__init__(self)
@@ -126,6 +127,7 @@ class MantaSomaticSV(Job):
         cmd = configure_mantasv + " && " + self.output_dir+"/runWorkflow.py -m local -j 20"
         return cmd
 
+
 class SViCT(Job):
   def __init__(self):
     Job.__init__(self)
@@ -140,6 +142,7 @@ class SViCT(Job):
 
     cmd = ("svict -i {input_bam} -r {reference_sequence} -o {output} ").format(input_bam=self.input_bam, reference_sequence=self.reference_sequence, output=self.output)
     return cmd
+
 
 class Svaba(Job):
   def __init__(self):
@@ -163,14 +166,15 @@ class Svaba(Job):
               )
     
     sort_cmd = "samtools sort -T " + self.scratch + \
-               " {}.contigs.bam -o {}.contigs.sort.bam".format(self.output_sample, self.output_sample)
+               "{}.contigs.bam -o {}.contigs.sort.bam".format(self.output_sample, self.output_sample)
     
     index_cmd = "samtools index {}.contigs.sort.bam".format(self.output_sample)
     
     cmd = " && ".join([svaba_cmd, sort_cmd, index_cmd])
 
     return cmd
-    
+
+
 class Lumpy(Job):
   def __init__(self):
     Job.__init__(self)
@@ -185,7 +189,7 @@ class Lumpy(Job):
     self.jobname = "lumpy-sv-calling"
 
   def command(self):
-    
+
     tmpdir = "{}/lumpy-{}".format(self.scratch, uuid.uuid4())
 
     discordant_cmd = ("samtools view -@ {threads} -b -F 1294 {n_bam} > {n_discordants} " + \
@@ -223,7 +227,20 @@ class Lumpy(Job):
         self.normal_discordants, self.normal_splitters, self.tumor_discordants, self.tumor_splitters)
 
     return " && ".join([discordant_cmd, splitter_cmd, lumpy_cmd, index_cmd])
-    
+
+
+class AnnotateSvaba(Job):
+    def __init__(self):
+        self.input_vcf = None
+        self.output_vcf = None
+        self.jobname = None
+
+    def command(self):
+        cmd = "annotate_svaba.py {input_vcf} > {output_vcf}".format(input_vcf=self.input_vcf,
+                                                                    output_vcf=self.output_vcf)
+
+        return cmd
+
 
 class GenerateIGVNavInputSV(Job):
     def __init__(self):
@@ -233,18 +250,50 @@ class GenerateIGVNavInputSV(Job):
         self.tool = None
         self.output = None
         self.jobname = None
+        self.target_bed = None
+        self.annot_bed = None
 
     def command(self):
+        params = ''
         vcftype = ''
+
         if self.vcftype:
-            vcftype = " --vcftype " + self.vcftype
+            vcftype = " --vcftype {} ".format(self.vcftype)
 
-        return "generateIGVnavInput_SV.py --vcf {input_vcf} --sdid {sdid} {vcftype} --tool {tool} \
-            --output {output}".format(input_vcf=self.input_vcf,
-                                      sdid=self.sdid,
-                                      tool=self.tool,
-                                      vcftype=vcftype,
-                                      output=self.output)
+        if self.tool:
+            params = " --sdid {sdid} --tool {tool} ".format(sdid=self.sdid,
+                                                            tool=self.tool)
+        else:
+            params = " --annotBed {annot_bed} --targetBed {target_bed} ".format(annot_bed=self.annot_bed,
+                                                                              target_bed=self.target_bed)
+
+        return "generateIGVnavInput_SV.py --input {input_vcf} {params} {vcftype} --output {output}".format(
+                                                                        input_vcf=self.input_vcf,
+                                                                        params=params,
+                                                                        vcftype=vcftype,
+                                                                        output=self.output)
 
 
-    
+class Gridss(Job):
+    def __init__(self):
+        Job.__init__(self)
+        self.input_bam = None
+        self.output = None
+        self.reference_sequence = None
+        self.workingdir = None
+        self.assembly = None
+        self.steps = None
+        self.threads = None
+        self.jobname = None
+
+    def command(self):
+
+        cmd = ("gridss.sh --reference {reference} --assembly {assembly} " + \
+               " --threads {threads} --workingdir {workingdir} " + \
+               " --output {output} {input}").format(reference=self.reference_sequence,
+                                                    assembly=self.assembly,
+                                                    threads=self.threads,
+                                                    workingdir=self.workingdir,
+                                                    output=self.output,
+                                                    input=self.input_bam)
+        return cmd
