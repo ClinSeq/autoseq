@@ -95,7 +95,7 @@ class VarDict(Job):
               " -b \"{}|{}\" ".format(self.input_tumor, self.input_normal) + \
               " -c 1 -S 2 -E 3 -g 4 -Q 10 " + required("", self.target_bed) + \
               " | testsomatic.R " + \
-              " | var2vcf_paired.pl -P 0.9 -m 4.25 -M " + required("-f ", self.min_alt_frac) + \
+              " | var2vcf_paired.pl -P 0.05 -m 4.25 -M " + required("-f ", self.min_alt_frac) + \
               " -N \"{}|{}\" ".format(self.tumorid, self.normalid) + \
               " | " + freq_filter + " | " + somatic_filter + " | " + fix_ambiguous_cl() + " | " + remove_dup_cl() + \
               " | vcfstreamsort -w 1000 " + \
