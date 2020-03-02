@@ -35,7 +35,7 @@ class MakeCNVkitTracks(Job):
         self.jobname = "make_cnvkit_tracks"
 
     def command(self):
-        awk_cmd1 = "awk '$1 != \"chromosome\" {print $1\"\\t\"$2\"\\t\"$3\"\\t\"$5}' %s > %s" % \
+        awk_cmd1 = "awk '$1 != \"chromosome\" {print $1\"\\t\"$2\"\\t\"$3\"\\t\"$6}' %s > %s" % \
                    (self.input_cnr, self.output_profile_bedgraph)
         awk_cmd2 = "awk '$1 != \"chromosome\" {print $1\"\\t\"$2\"\\t\"$3\"\\t\"$5}' %s > %s" % \
                    (self.input_cns, self.output_segments_bedgraph)
