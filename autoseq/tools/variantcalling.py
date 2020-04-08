@@ -54,9 +54,9 @@ class StrelkaGermline(Job):
                                 " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_filtered_vcf)
 
         #strelka causing error: vinay
-        return "echo done" 
+        #return "echo done" 
         
-        #return " && ".join(["source activate autoseq_py27", cmd,  filter_passed_variants, 'source activate base'])
+        return " && ".join(["source activate autoseq_py27", cmd,  filter_passed_variants, 'source activate base'])
 
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -80,12 +80,12 @@ class VarDict(Job):
         required("", self.input_normal)
 
         freq_filter = (" bcftools filter -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
-                       "| %s -c 'from autoseq.util.bcbio import depth_freq_filter_input_stream; import sys; print depth_freq_filter_input_stream(sys.stdin, %s, \"%s\")' " %
+                       "| %s -c 'from autoseq.util.bcbio import depth_freq_filter_input_stream; import sys; print(depth_freq_filter_input_stream(sys.stdin, %s, \"%s\"))' " %
                        (sys.executable, 0, 'bwa'))
 
         somatic_filter = (" sed 's/\\.*Somatic\\\"/Somatic/' "  # changes \".*Somatic\" to Somatic
                           "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
-                          "| %s -c 'from autoseq.util.bcbio import call_somatic; import sys; print call_somatic(sys.stdin.read())' " % sys.executable)
+                          "| %s -c 'from autoseq.util.bcbio import call_somatic; import sys; print( call_somatic(sys.stdin.read()))' " % sys.executable)
 
         blacklist_filter = " | intersectBed -a . -b {} | ".format(self.blacklist_bed)
 
@@ -144,7 +144,9 @@ class StrelkaSomatic(Job):
                       " | awk 'BEGIN { OFS = \"\\t\"} /^#/ { print $0 } {if($7==\"PASS\") print $0 }' " + \
                       " | bgzip > {output} && tabix -p vcf {output}".format(output=self.output_indels_vcf)
 
-        return " && ".join([cmd, filter_pass_snvs, filter_pass_indels])
+        #return 'echo done' #tmp fix to check tje flow : vinaaaaay
+
+        return " && ".join(['source activate autoseq_py27', cmd, filter_pass_snvs, filter_pass_indels, 'source activate base'])
 
 class Mutect2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumor_id=None, normal_id=None, reference_sequence=None,

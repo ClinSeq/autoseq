@@ -154,8 +154,8 @@ class Svaba(Job):
     sort_cmd = "samtools sort {}.contigs.bam -o {}.contigs.sort.bam".format(self.output_sample, self.output_sample)
     
     index_cmd = "samtools index {}.contigs.sort.bam".format(self.output_sample)
-    
-    cmd = " && ".join([svaba_cmd, sort_cmd, index_cmd])
+    #vinay: added new conda env for svaba
+    cmd = " && ".join(["source activate svaba", svaba_cmd, "source activate base", sort_cmd, index_cmd])
 
     return cmd
     
@@ -206,8 +206,8 @@ class Lumpy(Job):
 
     index_cmd = "samtools index {} && samtools index {} && samtools index {} && samtools index {}".format(
         self.normal_discordants, self.normal_splitters, self.tumor_discordants, self.tumor_splitters)
-
-    return " && ".join([discordant_cmd, splitter_cmd, lumpy_cmd, index_cmd])
+    #vinay: made change, added autoseq_py27 environment........ installed lumpy-sv in python2.7
+    return " && ".join(["source activate autoseq_py27" , discordant_cmd, splitter_cmd, lumpy_cmd, index_cmd, "source activate base"])
     
 
 class GenerateIGVNavInputSV(Job):
