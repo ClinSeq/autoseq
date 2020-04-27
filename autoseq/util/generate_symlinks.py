@@ -110,22 +110,24 @@ class GenerateSymlink():
             <Track clazz="org.broad.igv.variant.VariantTrack" color="0,0,178" displayMode="EXPANDED" fontSize="10" id="{vcf_full_file_path}" name="{vcf_file_path}" siteColorMode="ALLELE_FREQUENCY" squishedHeight="1" visible="true"/>
         """
         cnv_flank = """
-            <Track autoScale="false" clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="150" id="{full_path}" name="CNV {full_path}" renderer="SCATTER_PLOT" visible="true" windowFunction="mean">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-0.5" type="LINEAR"/>
+            <Track autoScale="false" clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="CNV {full_path}" color="255,51,51" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
         </Track>
         """
         cnv_flank_profile = """
-            <Track  autoScale="false" clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="150" id="{full_path}" name="CNV Profile {full_path}" renderer="SCATTER_PLOT" visible="true" windowFunction="mean">
-            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-0.5" type="LINEAR"/>
+            <Track  autoScale="false" clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="CNV Profile {full_path}" color="255,51,51" renderer="SCATTER_PLOT" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
         </Track>
 
         """
         snp_asf = """
-            <Track  clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="150" id="{full_path}" name="SNP ASF {full_path}" renderer="SCATTER_PLOT" visible="true" windowFunction="mean">
-            <DataRange baseline="0.5" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="0.0" type="LINEAR"/>
+            <Track  clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="SNP ASF {full_path}" color="255,51,51" renderer="SCATTER_PLOT" color="255,51,51" visible="true" windowFunction="mean">
+            <DataRange baseline="0.5" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
         </Track>
 
         """
+
+        
         try:
             logging.info(" Generating IGV Session File ")
             igvnav_dir = os.path.join(self.outputdirname, 'IGVnav')
@@ -141,11 +143,10 @@ class GenerateSymlink():
             snp_bam_panel = ""
             snp_vep = ""
             for track_type, each_track in [('snps', 'bam_cfdna'), ('snps', 'bam_normal'),
-                     ('cnv', 'flank_cnv_cfdna'),
                      ('cnv', 'flank_cnv_normal'),
+                     ('cnv', 'flank_profile_normal'),
+                     ('cnv', 'flank_cnv_cfdna'),
                      ('cnv', 'flank_profile_cfdna'),
-                     ('cnv', 'flank_profile_normal'),
-                     ('cnv', 'flank_profile_normal'),
                      ('asf', 'flank_asf'),
                      ('snps', 'vep')]:
                 
@@ -169,11 +170,10 @@ class GenerateSymlink():
              
             #session file for structural variants
             all_sv_files=[('bam_common', 'bam_nodups'),('sv', 'bam_cfdna'), ('sv', 'bam_normal'),
-                     ('cnv', 'flank_cnv_cfdna'),
                      ('cnv', 'flank_cnv_normal'),
+                     ('cnv', 'flank_profile_normal'),
+                     ('cnv', 'flank_cnv_cfdna'),
                      ('cnv', 'flank_profile_cfdna'),
-                     ('cnv', 'flank_profile_normal'),
-                     ('cnv', 'flank_profile_normal'),
                      ('asf', 'flank_asf'),
                      ('sv', 'mut_svict_cfdna'), ('sv', 'mut_svict_normal'),
                      ('sv', 'mut_sava'),  ('sv', 'mut_svcaller_cfdna'),
