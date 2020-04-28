@@ -1,6 +1,6 @@
 import subprocess
 import argparse
-import vcf
+#import vcf
 import os
 import shutil
 import logging
@@ -27,7 +27,7 @@ class GenerateSymlink():
         if not os.path.exists(igvnav_dirname_dst): os.mkdir(igvnav_dirname_dst)
         try:
             symlinks = (('variants','.vep.vcf'),('bams','-nodups.bam'), ('bams','-nodups.bam.bai'),
-                        ('bams','.overlapped.bam'), ('bams','.overlapped.bai'), ('variants','.vep.vcf'),
+                        ('bams','.overlapped.bam'), ('bams','.overlapped.bai'), ('variants','.vep.vcf'), ('cnv', '.bedGraph'), ('variants', '.bedGraph'),
                       ('svs/igv','.mut'), ('svs','.gtf'), ('svs','.bam'), ('svs','.bai'), ('', 'igvnav-input.txt')) + args
             for each_input in symlinks:
                 dir_name = os.path.join(src_dir,each_input[0])
@@ -63,7 +63,13 @@ class GenerateSymlink():
                      ('sv', 'gtf_normal', '^(?:(?!CFDNA).)*(DEL|DUP|INV|TRA).gtf$'),
                      ('snps', 'bam_cfdna', '.*-CFDNA-.*.clip.overlapped.bam$'),
                      ('snps', 'bam_normal', '^(?:(?!CFDNA).)*clip.overlapped.bam$'),
-                     ('snps', 'vep', '.*.all.(somatic|germline).vep.vcf$')
+                     ('snps', 'vep', '.*.all.(somatic|germline).vep.vcf$'),
+                     ('cnv', 'flank_profile_cfdna', '.*-CFDNA-.*_profile.bedGraph'),
+                     ('cnv', 'flank_profile_normal', '^(?:(?!CFDNA).)*_profile.bedGraph'),
+                     ('cnv', 'flank_cnv_cfdna', '^(?:(?!CFDNA).)*_segments.bedGraph'),
+                     ('cnv', 'flank_cnv_normal', '.*-CFDNA-.*_segments.bedGraph'),
+                     ('asf', 'flank_asf', '.*germline-variants-somatic-afs.bedGraph'),
+
                      ]
 
         for variant_type, file_type, regex in all_files:
@@ -103,6 +109,25 @@ class GenerateSymlink():
         snp_vcf = """
             <Track clazz="org.broad.igv.variant.VariantTrack" color="0,0,178" displayMode="EXPANDED" fontSize="10" id="{vcf_full_file_path}" name="{vcf_file_path}" siteColorMode="ALLELE_FREQUENCY" squishedHeight="1" visible="true"/>
         """
+        cnv_flank = """
+            <Track autoScale="false" clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="CNV {full_path}" color="255,51,51" renderer="BAR_CHART" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
+        </Track>
+        """
+        cnv_flank_profile = """
+            <Track  autoScale="false" clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="CNV Profile {full_path}" color="255,51,51" renderer="SCATTER_PLOT" visible="true" windowFunction="mean">
+            <DataRange baseline="0.0" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
+        </Track>
+
+        """
+        snp_asf = """
+            <Track  clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="SNP ASF {full_path}" color="255,51,51" renderer="SCATTER_PLOT" color="255,51,51" visible="true" windowFunction="mean">
+            <DataRange baseline="0.5" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
+        </Track>
+
+        """
+
+        
         try:
             logging.info(" Generating IGV Session File ")
             igvnav_dir = os.path.join(self.outputdirname, 'IGVnav')
@@ -117,8 +142,14 @@ class GenerateSymlink():
             snp_resource = ""
             snp_bam_panel = ""
             snp_vep = ""
-            for track_type, each_track in [('snps', 'bam_cfdna'), ('snps', 'bam_normal'), ('snps', 'vep')]:
-
+            for track_type, each_track in [('snps', 'bam_cfdna'), ('snps', 'bam_normal'),
+                     ('cnv', 'flank_cnv_normal'),
+                     ('cnv', 'flank_profile_normal'),
+                     ('cnv', 'flank_cnv_cfdna'),
+                     ('cnv', 'flank_profile_cfdna'),
+                     ('asf', 'flank_asf'),
+                     ('snps', 'vep')]:
+                
                 for each_file in igv_session_files[track_type][each_track]:
                     full_path = igvnav_dir + '/' + each_file
                     if not os.path.exists(full_path) or not os.path.getsize(full_path):
@@ -127,13 +158,23 @@ class GenerateSymlink():
                     if each_track.startswith('bam'):
                         snp_bam_track = tracks_bam_str.format(bam_file_full=full_path, bam_file=each_file)
                         snp_bam_panel += panel_str.format(panel_height=250, panel_width=1800, panel_name=each_file , tracks=snp_bam_track)
+                    if each_track.startswith('flank_cnv'):
+                        snp_vep += cnv_flank.format(full_path=full_path)
+                    if each_track.startswith('flank_profile'):
+                        snp_vep += cnv_flank_profile.format(full_path=full_path)
+                    if each_track.startswith('flank_asf'):
+                        snp_vep += snp_asf.format(full_path=full_path)
                     if  each_track.startswith('vep'):
-                        print(full_path)
                         snp_vep += snp_vcf.format(vcf_full_file_path=full_path, vcf_file_path=each_file)
 
-
+             
             #session file for structural variants
             all_sv_files=[('bam_common', 'bam_nodups'),('sv', 'bam_cfdna'), ('sv', 'bam_normal'),
+                     ('cnv', 'flank_cnv_normal'),
+                     ('cnv', 'flank_profile_normal'),
+                     ('cnv', 'flank_cnv_cfdna'),
+                     ('cnv', 'flank_profile_cfdna'),
+                     ('asf', 'flank_asf'),
                      ('sv', 'mut_svict_cfdna'), ('sv', 'mut_svict_normal'),
                      ('sv', 'mut_sava'),  ('sv', 'mut_svcaller_cfdna'),
                      ('sv', 'mut_svcaller_normal'),
@@ -175,6 +216,16 @@ class GenerateSymlink():
                         sv_resource += resource_path.format(path_name=full_path)
                         sv_mut_track += sv_mut_track_str.format(mut_file_full_path=full_path, id_field=id_field)
 
+                    if each_track.startswith('flank_cnv'):
+                        sv_resource += resource_path.format(path_name=full_path)
+                        sv_mut_track += cnv_flank.format(full_path=full_path)
+                    if each_track.startswith('flank_profile'):
+                        sv_resource += resource_path.format(path_name=full_path)
+                        sv_mut_track += cnv_flank_profile.format(full_path=full_path)
+                    if each_track.startswith('flank_asf'):
+                        sv_resource += resource_path.format(path_name=full_path)
+                        sv_mut_track += snp_asf.format(full_path=full_path)
+
                     if each_track.startswith('gtf'):
                         sv_resource += resource_path.format(path_name=full_path)
                         sv_gtf_track += sv_gtf_track_str.format(gtf_file_full_path=full_path, gtf_file_path=each_file)
@@ -191,6 +242,7 @@ class GenerateSymlink():
             logging.info("Created IGV Session Files..")
 
         except Exception as e:
+            print('error', e)
             logging.info("Error While creating session file : " + str(e))
 
 
