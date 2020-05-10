@@ -121,7 +121,7 @@ class GenerateSymlink():
 
         """
         snp_asf = """
-            <Track  clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="SNP ASF {full_path}" color="255,51,51" renderer="SCATTER_PLOT" color="255,51,51" visible="true" windowFunction="mean">
+            <Track  clazz="org.broad.igv.track.DataSourceTrack" displayMode="SQUISHED" fontSize="10" height="80" id="{full_path}" name="SNP ASF {full_path}"  renderer="SCATTER_PLOT" color="255,51,51" visible="true" windowFunction="mean">
             <DataRange baseline="0.5" drawBaseline="true" flipAxis="false" maximum="1.0" minimum="-1" type="LINEAR"/>
         </Track>
 
