@@ -66,8 +66,8 @@ class GenerateSymlink():
                      ('snps', 'vep', '.*.all.(somatic|germline).vep.vcf$'),
                      ('cnv', 'flank_profile_cfdna', '.*-CFDNA-.*_profile.bedGraph'),
                      ('cnv', 'flank_profile_normal', '^(?:(?!CFDNA).)*_profile.bedGraph'),
-                     ('cnv', 'flank_cnv_cfdna', '^(?:(?!CFDNA).)*_segments.bedGraph'),
-                     ('cnv', 'flank_cnv_normal', '.*-CFDNA-.*_segments.bedGraph'),
+                     ('cnv', 'flank_cnv_cfdna', '.*-CFDNA-.*_segments.bedGraph'),
+                     ('cnv', 'flank_cnv_normal', '^(?:(?!CFDNA).)*_segments.bedGraph'),
                      ('asf', 'flank_asf', '.*germline-variants-somatic-afs.bedGraph'),
 
                      ]
