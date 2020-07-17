@@ -104,7 +104,7 @@ class Realignment(Job):
 
         # creating target intervals for indel realignment 
         # Param: -L can be added to specify the genomic region
-        target_creator_cmd = "java " +  required("-Djava.io.tmpdir=", self.scratch) +\
+        target_creator_cmd = "java --Xmx8G -XX:ParallelGCThreads=10 " +  required("-Djava.io.tmpdir=", self.scratch) +\
                             " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                             " -T RealignerTargetCreator " + \
                             " -R " + self.reference_genome + \
@@ -116,7 +116,7 @@ class Realignment(Job):
                             " -I " + self.input_bam + \
                             " -o " + self.target_intervals 
 
-        realign_reads_cmd = "java -Xmx8G " + \
+        realign_reads_cmd = "java -Xmx8G -XX:ParallelGCThreads=10 " + \
                             required("-Djava.io.tmpdir=", self.scratch) + \
                             " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
                             " -T IndelRealigner " + \
