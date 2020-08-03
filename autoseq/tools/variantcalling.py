@@ -99,7 +99,7 @@ class VarDict(Job):
               " -N \"{}|{}\" ".format(self.tumorid, self.normalid) + \
               " | " + freq_filter + " | " + somatic_filter + " | " + fix_ambiguous_cl() + " | " + remove_dup_cl() + \
               " | vcfstreamsort -w 1000 " + \
-              " | " + vt_split_and_leftaln(self.reference_sequence) + \
+              " | " + vt_split_and_leftaln(self.reference_sequence, allow_ref_mismatches=True) + \
               " | bcftools view --apply-filters .,PASS " + \
               " | vcfsorter.pl {} /dev/stdin ".format(self.reference_dict) + \
               conditional(blacklist_filter, self.blacklist_bed) + \
