@@ -115,39 +115,46 @@ class LiqBioPipeline(ClinseqPipeline):
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
             self.configure_svict(unique_capture)
-            self.configure_gridss(unique_capture)
+            #self.configure_gridss(unique_capture)
 
         # Configure a liqbio analyses for each normal-cancer pairing:
         for normal_capture in self.get_mapped_captures_normal():
             for cancer_capture in self.get_mapped_captures_cancer():
                 self.configure_panel_analysis_cancer_vs_normal_liqbio(
                     normal_capture, cancer_capture, umi)
+                self.configure_gridss(normal_capture, cancer_capture)
 
-    def configure_gridss(self, unique_capture):
-        input_bam = self.get_capture_bam(unique_capture, umi=False)
-        sample_str = compose_lib_capture_str(unique_capture)
+    def configure_gridss(self, normal_capture, cancer_capture):
+        input_normal = self.get_capture_bam(normal_capture, umi=False)
+        input_cancer = self.get_capture_bam(cancer_capture, umi=False)
+
+        normal_str = compose_lib_capture_str(normal_capture)
+        cancer_str = compose_lib_capture_str(cancer_capture)
 
         gridss = Gridss()
-        gridss.input_bam = input_bam
+        gridss.input_normal = input_normal
+        gridss.input_tumor = input_cancer
         gridss.reference_sequence = self.refdata['bwaIndex']
-        gridss.assembly = "{}/svs/gridss/{}-assembly.bam".format(self.outdir, sample_str)
+        gridss.pondir = self.refdata["pondir"]
+        gridss.assembly = "{}/svs/gridss/{}-{}-assembly.bam".format(self.outdir, normal_str, cancer_str)
         gridss.steps = " ALL "
         gridss.workingdir = "{}/svs/gridss/".format(self.outdir)
-        gridss.output = "{}/svs/gridss/{}-gridss.vcf.gz".format(self.outdir, sample_str)
+        gridss.output_full = "{}/svs/gridss/{}-{}-gridss.vcf.gz".format(self.outdir, normal_str, cancer_str)
+        gridss.output_filter = "{}/svs/gridss/{}-{}-gridss_filtered.vcf.bgz".format(self.outdir, normal_str, cancer_str)
         gridss.threads = self.maxcores
-        gridss.jobname = "gridss-sv-calling-{}".format(sample_str)
+        gridss.jobname = "gridss-sv-calling-{}-{}".format(normal_str, cancer_str)
 
         self.add(gridss)
 
-        gridss_igvinput = GenerateIGVNavInputSV()
-        gridss_igvinput.input_vcf = gridss.output
-        gridss_igvinput.sdid = unique_capture.sdid
-        gridss_igvinput.vcftype = 'normal' if '-N-'in sample_str else 'somatic'
-        gridss_igvinput.tool = 'gridss'
-        gridss_igvinput.output = "{}/svs/igv/{}".format(self.outdir, sample_str)
-        gridss_igvinput.jobname = "generate-igvnav-input-gridss"
+        # gridss_igvinput = GenerateIGVNavInputSV()
+        # gridss_igvinput.input_vcf = gridss.output
+        # gridss_igvinput.sdid = unique_capture.sdid
+        # gridss_igvinput.vcftype = 'normal' if '-N-'in sample_str else 'somatic'
+        # gridss_igvinput.tool = 'gridss'
+        # gridss_igvinput.output = "{}/svs/igv/{}".format(self.outdir, sample_str)
+        # gridss_igvinput.jobname = "generate-igvnav-input-gridss"
 
-        self.add(gridss_igvinput)
+        # self.add(gridss_igvinput)
 
     def configure_svict(self, unique_capture):
 
@@ -377,7 +384,7 @@ class LiqBioPipeline(ClinseqPipeline):
                                                     capture_kit=capture_kit)
             mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
 
-            self.set_capture_bam(unique_capture, filtered_bam, self.umi)
+            self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
         # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
