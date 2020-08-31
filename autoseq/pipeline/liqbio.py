@@ -146,15 +146,15 @@ class LiqBioPipeline(ClinseqPipeline):
 
         self.add(gridss)
 
-        # gridss_igvinput = GenerateIGVNavInputSV()
-        # gridss_igvinput.input_vcf = gridss.output
-        # gridss_igvinput.sdid = unique_capture.sdid
-        # gridss_igvinput.vcftype = 'normal' if '-N-'in sample_str else 'somatic'
-        # gridss_igvinput.tool = 'gridss'
-        # gridss_igvinput.output = "{}/svs/igv/{}".format(self.outdir, sample_str)
-        # gridss_igvinput.jobname = "generate-igvnav-input-gridss"
+        gridss_igvinput = GenerateIGVNavInputSV()
+        gridss_igvinput.input_vcf = gridss.output_filter
+        gridss_igvinput.sdid = cancer_capture.sdid
+        gridss_igvinput.vcftype = 'somatic'
+        gridss_igvinput.tool = 'gridss'
+        gridss_igvinput.output = "{}/svs/igv/{}-{}".format(self.outdir, normal_str, cancer_str)
+        gridss_igvinput.jobname = "generate-igvnav-input-gridss-{}-{}".format(normal_str, cancer_str)
 
-        # self.add(gridss_igvinput)
+        self.add(gridss_igvinput)
 
     def configure_svict(self, unique_capture):
 
