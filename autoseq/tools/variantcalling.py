@@ -78,7 +78,7 @@ class VarDict(Job):
         required("", self.input_tumor)
         required("", self.input_normal)
 
-        freq_filter = (" bcftools filter -e 'STATUS !~ \".*Somatic\"' 2> /dev/null "
+        freq_filter = (" bcftools filter -e 'STATUS !~ \".*Somatic\" || P0.01Likely=1 || InDelLikely=1' 2> /dev/null "
                        "| %s -c 'from autoseq.util.bcbio import depth_freq_filter_input_stream; import sys; print depth_freq_filter_input_stream(sys.stdin, %s, \"%s\")' " %
                        (sys.executable, 0, 'bwa'))
 
@@ -93,6 +93,8 @@ class VarDict(Job):
               required("-N ", self.tumorid) + \
               optional("-r ", self.min_num_reads) + \
               " -b \"{}|{}\" ".format(self.input_tumor, self.input_normal) + \
+              optional("-mfreq ", self.min_alt_frac) + \
+              optional("-nmfreq ", self.min_alt_frac) + \
               " -c 1 -S 2 -E 3 -g 4 -Q 10 " + required("", self.target_bed) + \
               " | testsomatic.R " + \
               " | var2vcf_paired.pl -P 0.05 -m 4.25 -M " + required("-f ", self.min_alt_frac) + \

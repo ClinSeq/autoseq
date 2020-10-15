@@ -377,7 +377,7 @@ class LiqBioPipeline(ClinseqPipeline):
                                                     capture_kit=capture_kit)
             mark_dups_bam = self.configure_markdups(bamfile=realigned_bam, unique_capture=unique_capture)
 
-            self.set_capture_bam(unique_capture, filtered_bam, self.umi)
+            self.set_capture_bam(unique_capture, clip_overlap_bam, self.umi)
 
     def configure_alignment_with_umi(self, bamfile, clinseq_barcode, capture_kit, jobname):
         # Map the reads with bwa and merge with the UMI tags (picard SamToFastq | bwa mem | picard MergeBamAlignment)
@@ -456,6 +456,7 @@ class LiqBioPipeline(ClinseqPipeline):
         filter_con_reads.scratch = self.scratch
         filter_con_reads.reference_genome = self.refdata['reference_genome']
         filter_con_reads.output_bam = "{}/bams/{}/{}.consensus.filtered.bam".format(self.outdir, capture_kit, clinseq_barcode)
+        filter_con_reads.is_intermediate = True
         filter_con_reads.jobname = "filter-consensus-reads-{}".format(clinseq_barcode)
         self.add(filter_con_reads)
 
