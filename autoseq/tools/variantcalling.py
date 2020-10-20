@@ -260,14 +260,17 @@ class VarDictForPureCN(Job):
                       required("-N ", self.tumorid) + \
                       optional("-r ", self.min_num_reads) + \
                       " -b \"{}|{}\" ".format(self.input_tumor, self.input_normal) + \
+                      optional("-mfreq ", self.min_alt_frac) + \
+                      optional("-nmfreq ", self.min_alt_frac) + \
                       " -c 1 -S 2 -E 3 -g 4 -Q 10 " + required("", self.target_bed) + \
                       " | testsomatic.R " + \
-                      " | var2vcf_paired.pl -P 0.9 -m 4.25 " + required("-f ", self.min_alt_frac) + \
+                      " | var2vcf_paired.pl -P 0.05 -m 4.25 " + required("-f ", self.min_alt_frac) + \
                       " -N \"{}|{}\" ".format(self.tumorid, self.normalid) + \
                       " | " + fix_ambiguous_cl() + " | " + remove_dup_cl() + \
                       " | sed 's/Somatic;/Somatic;SOMATIC;/g' " + \
                       " | sed '/^#CHROM/i ##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description=\"Somatic event\">' " + \
                       " | vcfstreamsort -w 1000 " + \
+                      " | bcftools filter -e 'P0.01Likely=1 || InDelLikely=1' 2> /dev/null " + \
                       " | bcftools view --apply-filters .,PASS " + \
                       " | vcfsorter.pl {} /dev/stdin ".format(self.reference_dict) + \
                       " | bgzip > " + tmp_vcf + " && tabix -p vcf " + tmp_vcf
