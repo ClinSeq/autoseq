@@ -114,7 +114,7 @@ class LiqBioPipeline(ClinseqPipeline):
         # Configure liqbio analyses to be run on all unique panel captures individually:
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
-            #self.configure_svict(unique_capture)
+            self.configure_svict(unique_capture)
             self.configure_gridss(unique_capture)
 
         # Configure a liqbio analyses for each normal-cancer pairing:
