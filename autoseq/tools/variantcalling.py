@@ -191,8 +191,8 @@ class Mutect2Somatic(Job):
 
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 target_bed=None, normal_pileup=None, tumor_pileup=None, output_snv=None, output_indel=None,
-                 output_somatic_snv=None, output_somatic_indel=None, scratch="/tmp"):
+                 target_bed=None, normal_pileup=None, tumor_pileup=None, outdir=None,
+                 output_somatic_snv=None, output_somatic_indel=None, scratch="/tmp", min_alt_frac=0.1):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -202,35 +202,89 @@ class Varscan2Somatic(Job):
         self.target_bed = target_bed
         self.normal_pileup = normal_pileup
         self.tumor_pileup = tumor_pileup
+        self.outdir = outdir
         self.output_indel = output_indel
         self.output_snv = output_snv
         self.output_somatic_snv = output_somatic_snv
         self.output_somatic_indel = output_somatic_indel
         self.scratch = scratch
-        
+        self.min_alt_frac = min_alt_frac
+
     def command(self):
         required("", self.input_tumor)
         required("", self.input_normal)
         required("", self.reference_sequence)
 
         # configuration
-        # 
-        normal_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " -l " + self.target_bed + " " + self.input_normal + " > " + self.normal_pileup 
-        tumor_mpileup_cmd = "samtools mpileup -C50 -f " + self.reference_sequence + " -l " + self.target_bed + " "  + self.input_tumor + " > " + self.tumor_pileup 
+        mqThres="20"
+        bqThres="30"
+        
+        normal_mpileup_cmd = "samtools mpileup --no-BAQ --max-depth 50000 --min-MQ " + mqThres + " --min-BQ " + bqThres " -C50 -f " + \
+                             self.reference_sequence + " -l " + self.target_bed + " " + self.input_normal + " > " + \
+                             self.normal_pileup
+        tumor_mpileup_cmd = "samtools mpileup --no-BAQ --max-depth 50000 --min-MQ " + mqThres + " --min-BQ " + bqThres " -C50 -f " + \
+                            self.reference_sequence + " -l " + self.target_bed + " "  + self.input_tumor + " > " + \
+                            self.tumor_pileup
+        
 
+        # varscan somatic
         varscan_cmd = "varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch + \
                       " somatic " + self.normal_pileup + " " + self.tumor_pileup + \
-                      " --output-snp " + self.output_snv + \
-                      " --output-indel " + self.output_indel + \
-                      " --min-coverage 3 --min-var-freq 0.02 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 0" + \
-                      " --output-vcf 1" 
+                      " --output-snp " + self.outdir + "/varscan.snp.vcf " + \
+                      " --output-indel " + self.outdir + "/varscan.indel.vcf " + \
+                      optional("--min-var-freq ", self.min_alt_frac) + \
+                      " --min-coverage 50 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 0 --output-vcf 1"
 
-        somatic_filter = "varscan -Xmx10g -Djava.io.tmpdir="+ self.scratch + \
-                         " processSomatic " + self.output_indel + \
-                        " && varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch +\
-                        " processSomatic " + self.output_snv
-
-        return " && ".join([normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, somatic_filter])
+        # varscan processSomatic
+        process_somatic = "varscan -Xmx10g -Djava.io.tmpdir="+ self.scratch + \
+                         " processSomatic " + self.outdir + "/varscan.indel.vcf " + \
+                         optional("--min-tumor-freq ", self.min_alt_frac) + \
+                         " && varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch + \
+                         " processSomatic " + self.outdir + "/varscan.snp.vcf " + \
+                         optional("--min-tumor-freq ", self.min_alt_frac)
+        
+        # create variant list on format that bam-readcount accepts
+        variant_lists = "awk 'BEGIN {OFS=\"\\t\"} {if (!/^#/) { isDel=(length($4) > length($5)) ? 1 : 0; print $1,($2+isDel),($2+isDel); }}' " + \
+                        self.outdir + "/varscan.indel.Somatic.hc.vcf > " + \
+                        self.outdir + "/varscan.indel.Somatic.hc.var && " + \
+                        "awk 'BEGIN {OFS=\"\\t\"} {if (!/^#/) { isDel=(length($4) > length($5)) ? 1 : 0; print $1,($2+isDel),($2+isDel); }}' " + \
+                        self.outdir + "/varscan.snp.Somatic.hc.vcf > " + \
+                        self.outdir + "/varscan.snp.Somatic.hc.var"
+        
+        # link bam index file to format that bam-readcount accepts
+        bai_file_link = "ln -svf " + self.input_tumor.replace(".bam", ".bai") + self.input_tumor + ".bai"
+        
+        # bam-readcount
+        bam_readcount = "bam-readcount -q " + mqThres + " -b " + bqThres + " -l " + \
+                        self.outdir + "/varscan.indel.Somatic.hc.var -f " + self.reference_sequence + \
+                        " -w 1 " + self.input_tumor + " > " + self.outdir + "/varscan.indel.Somatic.hc.readcount && " + \
+                        "bam-readcount -q " + mqThres + " -b " + bqThres + " -l " + \
+                        self.outdir + "/varscan.snp.Somatic.hc.var -f " + self.reference_sequence + \
+                        " -w 1 " + self.input_tumor + " > " + self.outdir + "/varscan.snp.Somatic.hc.readcount && "
+        
+        # fpfilter
+        fpfilter_indel = "varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch + " fpfilter " + \
+                         self.outdir + "/varscan.indel.Somatic.hc.vcf " + \
+                         self.outdir + "/varscan.indel.Somatic.hc.readcount " + \
+                         " --output-file " + self.output_somatic_indel + \
+                         " --filtered-file " + self.output_somatic_indel.replace("filtered.vcf", "failed.vcf") + \
+                         optional("--min-var-freq ", self.min_alt_frac) + \
+                         " --min-var-count 4 --min-strandedness 0.1 --min-strand-reads 10 --max-basequal-diff 90 " + \
+                         " --min-ref-avgrl 70 --min-var-avgrl 70 --max-ref-mmqs 100 --max-var-mmqs 90 --max-mmqs-diff 90"
+        
+        fpfilter_snv = "varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch + " fpfilter " + \
+                         self.outdir + "/varscan.snp.Somatic.hc.vcf " + \
+                         self.outdir + "/varscan.snp.Somatic.hc.readcount " + \
+                         " --output-file " + self.output_somatic_snv + \
+                         " --filtered-file " + self.output_somatic_snv.replace("filtered.vcf", "failed.vcf") + \
+                         optional("--min-var-freq ", self.min_alt_frac) + \
+                         " --min-var-count 4 --min-strandedness 0.1 --min-strand-reads 10 --max-basequal-diff 50 " + \
+                         " --min-ref-avgrl 70 --min-var-avgrl 70 --max-ref-mmqs 100 --max-var-mmqs 180 --max-mmqs-diff 180"
+        
+        # pileup deletion
+        delete_pileup = "rm " + self.normal_pileup + " && rm " + self.tumor_pileup
+        
+        return " && ".join([normal_mpileup_cmd, tumor_mpileup_cmd, varscan_cmd, process_somatic, variant_lists, bai_file_link, bam_readcount, fpfilter_indel, fpfilter_snv, delete_pileup])
 
 class VarDictForPureCN(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
@@ -576,11 +630,11 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                             reference_sequence=pipeline.refdata['reference_genome'],
                             normal_pileup="{}/variants/varscan/{}.pileup".format(outdir, normal_capture_str),
                             tumor_pileup="{}/variants/varscan/{}.pileup".format(outdir, cancer_capture_str),
+                            outdir = outdir,
                             target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20-gz'],
-                            output_snv="{}/variants/varscan/{}-{}-varscan.snp.vcf".format(outdir, normal_capture_str, cancer_capture_str) ,
-                            output_indel="{}/variants/varscan/{}-{}-varscan.indel.vcf".format(outdir, normal_capture_str, cancer_capture_str),
-                            output_somatic_snv="{}/variants/varscan/{}-{}-varscan.snp.Somatic.vcf".format(outdir, normal_capture_str, cancer_capture_str),
-                            output_somatic_indel="{}/variants/varscan/{}-{}-varscan.indel.Somatic.vcf".format(outdir, normal_capture_str, cancer_capture_str),
+                            output_somatic_snv="{}/variants/varscan/{}-{}-varscan.snp.Somatic.hc.filtered.vcf".format(outdir, normal_capture_str, cancer_capture_str),
+                            output_somatic_indel="{}/variants/varscan/{}-{}-varscan.indel.Somatic.hc.filtered.vcf".format(outdir, normal_capture_str, cancer_capture_str),
+                            min_alt_frac=min_alt_frac,
                             scratch = pipeline.scratch
                             )
         varscan_somatic.jobname = "varscan-somatic/{}".format(cancer_capture_str)
