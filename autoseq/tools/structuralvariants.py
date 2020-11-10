@@ -277,11 +277,8 @@ class GenerateIGVNavInputSV(Job):
 class Gridss(Job):
     def __init__(self):
         Job.__init__(self)
-        self.input_normal = None
-        self.input_tumor = None
-        self.output_full = None
-        self.output_filter = None
-        self.pondir = None
+        self.input_bam = None
+        self.output = None
         self.reference_sequence = None
         self.workingdir = None
         self.assembly = None
@@ -291,26 +288,12 @@ class Gridss(Job):
 
     def command(self):
 
-        variant_calling = ("gridss.sh --reference {reference} --assembly {assembly} " + \
-                           " --threads {threads} --steps {steps} --workingdir {workingdir} " + \
-                           " --output {output} {input_normal} {input_tumor} ").format(
-                                                    reference=self.reference_sequence,
+        cmd = ("gridss.sh --reference {reference} --assembly {assembly} " + \
+               " --threads {threads} --workingdir {workingdir} " + \
+               " --output {output} {input}").format(reference=self.reference_sequence,
                                                     assembly=self.assembly,
                                                     threads=self.threads,
-                                                    steps=self.steps,
                                                     workingdir=self.workingdir,
                                                     output=self.output,
-                                                    input_normal=self.input_normal,
-                                                    input_tumor=self.input_tumor)
-        
-        conda_activate = " conda activate gridss_R "
-
-        somatic_filter = ("Rscript /nfs/PROBIO/autoseq-scripts/gridss_somatic_filter.R " + \
-                          " --input {input_vcf} -s /nfs/PROBIO/autoseq-scripts/ -p {pondir} " + \
-                          " --tumourordinal 2 --ref BSgenome.Hsapiens.1000genomes.hs37d5 " + \
-                          " --output {output_filvcf} ").format(input_vcf=self.output,
-                                                               pondir=self.pondir,
-                                                               output_filvcf=self.output_filter)
-        
-        conda_deactivate = " conda deactivate "
-        return " && ".join([variant_calling, conda_activate, somatic_filter, conda_deactivate])
+                                                    input=self.input_bam)
+        return cmd
