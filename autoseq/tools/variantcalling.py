@@ -60,7 +60,7 @@ class StrelkaGermline(Job):
 class VarDict(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None,
-                 blacklist_bed=None):
+                 blacklist_bed=None, threads = 1):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -73,18 +73,21 @@ class VarDict(Job):
         self.output = output
         self.min_alt_frac = min_alt_frac
         self.min_num_reads = min_num_reads
+        self.threads = threads
 
     def command(self):
         required("", self.input_tumor)
         required("", self.input_normal)
+        
+        mqThres="20"
+        bqThres="30"
 
         freq_filter = (" bcftools filter -e 'STATUS !~ \".*Somatic\" || P0.01Likely=1 || InDelLikely=1' 2> /dev/null "
                        "| %s -c 'from autoseq.util.bcbio import depth_freq_filter_input_stream; import sys; print depth_freq_filter_input_stream(sys.stdin, %s, \"%s\")' " %
                        (sys.executable, 0, 'bwa'))
 
         somatic_filter = (" sed 's/\\.*Somatic\\\"/Somatic/' "  # changes \".*Somatic\" to Somatic
-                          "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' "
-                          "| %s -c 'from autoseq.util.bcbio import call_somatic; import sys; print call_somatic(sys.stdin.read())' " % sys.executable)
+                          "| sed 's/REJECT,Description=\".*\">/REJECT,Description=\"Not Somatic via VarDict\">/' ")
 
         blacklist_filter = " | intersectBed -a . -b {} | ".format(self.blacklist_bed)
 
@@ -95,10 +98,14 @@ class VarDict(Job):
               " -b \"{}|{}\" ".format(self.input_tumor, self.input_normal) + \
               optional("-mfreq ", self.min_alt_frac) + \
               optional("-nmfreq ", self.min_alt_frac) + \
-              " -c 1 -S 2 -E 3 -g 4 -Q 10 " + required("", self.target_bed) + \
+              optional("-th ", self.threads) + \
+              " -c 1 -S 2 -E 3 -g 4 -Q 10 -B 100 -w 170 -O {} -q {} ".format(mqThres, bqThres) + \
+              required("", self.target_bed) + \
               " | testsomatic.R " + \
               " | var2vcf_paired.pl -P 0.05 -m 4.25 -M " + required("-f ", self.min_alt_frac) + \
               " -N \"{}|{}\" ".format(self.tumorid, self.normalid) + \
+              " -q {} -Q {} -d 50 ".format(bqThres, mqThres) + \
+              optional("-v ", self.min_num_reads) + \
               " | " + freq_filter + " | " + somatic_filter + " | " + fix_ambiguous_cl() + " | " + remove_dup_cl() + \
               " | vcfstreamsort -w 1000 " + \
               " | " + vt_split_and_leftaln(self.reference_sequence, allow_ref_mismatches=True) + \
@@ -592,7 +599,8 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                           target_bed=pipeline.refdata['targets'][target_name]['targets-bed-slopped20'],
                           output="{}/variants/vardict/{}-{}.vardict-somatic.vcf.gz".format(outdir, cancer_capture_str, normal_capture_str),
                           min_alt_frac=min_alt_frac, min_num_reads=min_num_reads,
-                          blacklist_bed=blacklist_bed
+                          blacklist_bed=blacklist_bed,
+                          threads=pipeline.maxcores
                           )
 
         vardict.jobname = "vardict/{}".format(cancer_capture_str)
