@@ -104,7 +104,7 @@ class ClinseqPipeline(PypedreamPipeline):
             "cov-low-thresh-fraction": 0.95,
             "cov-low-thresh-fold-cov": 50,
             "vardict-min-alt-frac": 0.02,
-            "vardict-min-num-reads": None,
+            "vardict-min-num-reads": 4,
             "vep-additional-options": "",
             "maxnonclonal_purecn": 0.2
         }

@@ -192,7 +192,8 @@ class Mutect2Somatic(Job):
 class Varscan2Somatic(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
                  target_bed=None, normal_pileup=None, tumor_pileup=None, outdir=None,
-                 output_somatic_snv=None, output_somatic_indel=None, scratch="/tmp", min_alt_frac=0.1):
+                 output_somatic_snv=None, output_somatic_indel=None, scratch="/tmp", min_alt_frac=0.1,
+                 min_num_reads=None):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -209,6 +210,7 @@ class Varscan2Somatic(Job):
         self.output_somatic_indel = output_somatic_indel
         self.scratch = scratch
         self.min_alt_frac = min_alt_frac
+        self.min_num_reads = min_num_reads
 
     def command(self):
         required("", self.input_tumor)
@@ -269,7 +271,8 @@ class Varscan2Somatic(Job):
                          " --output-file " + self.output_somatic_indel + \
                          " --filtered-file " + self.output_somatic_indel.replace("filtered.vcf", "failed.vcf") + \
                          optional("--min-var-freq ", self.min_alt_frac) + \
-                         " --min-var-count 4 --min-strandedness 0.1 --min-strand-reads 10 --max-basequal-diff 90 " + \
+                         optional("--min-var-count ", self.min_num_reads) + \
+                         " --min-strandedness 0.1 --min-strand-reads 10 --max-basequal-diff 90 " + \
                          " --min-ref-avgrl 70 --min-var-avgrl 70 --max-ref-mmqs 100 --max-var-mmqs 90 --max-mmqs-diff 90"
         
         fpfilter_snv = "varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch + " fpfilter " + \
@@ -278,7 +281,8 @@ class Varscan2Somatic(Job):
                          " --output-file " + self.output_somatic_snv + \
                          " --filtered-file " + self.output_somatic_snv.replace("filtered.vcf", "failed.vcf") + \
                          optional("--min-var-freq ", self.min_alt_frac) + \
-                         " --min-var-count 4 --min-strandedness 0.1 --min-strand-reads 10 --max-basequal-diff 50 " + \
+                         optional("--min-var-count ", self.min_num_reads) + \
+                         " --min-strandedness 0.1 --min-strand-reads 10 --max-basequal-diff 50 " + \
                          " --min-ref-avgrl 70 --min-var-avgrl 70 --max-ref-mmqs 100 --max-var-mmqs 180 --max-mmqs-diff 180"
         
         # pileup deletion
@@ -635,6 +639,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                             output_somatic_snv="{}/variants/varscan/{}-{}-varscan.snp.Somatic.hc.filtered.vcf".format(outdir, normal_capture_str, cancer_capture_str),
                             output_somatic_indel="{}/variants/varscan/{}-{}-varscan.indel.Somatic.hc.filtered.vcf".format(outdir, normal_capture_str, cancer_capture_str),
                             min_alt_frac=min_alt_frac,
+                            min_num_reads=min_num_reads,
                             scratch = pipeline.scratch
                             )
         varscan_somatic.jobname = "varscan-somatic/{}".format(cancer_capture_str)
