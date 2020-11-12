@@ -175,6 +175,9 @@ class Mutect2Somatic(Job):
         required("", self.input_normal)
         required("", self.reference_sequence)
 
+        mqThres="20"
+        bqThres="30"
+
         mutectsomatic_cmd = "gatk --java-options '-Xmx10g -Djava.io.tmpdir=" + self.scratch + "'" + \
                                     " Mutect2 " + \
                                     " -R " +  self.reference_sequence + \
@@ -183,13 +186,20 @@ class Mutect2Somatic(Job):
                                     " -tumor " + self.tumor_id + \
                                     " -normal " + self.normal_id + \
                                     " -L " + self.interval_list + \
-                                    " --disable-read-filter MateOnSameContigOrNoMappedMateReadFilter " + \
+                                    " --base-quality-score-threshold " + bqThres + \
+                                    " --callable-depth 50 " + \
+                                    " --min-base-quality-score " + bqThres + " --minimum-mapping-quality " + mqThres + \
+                                    " --f1r2-median-mq " + mqThres + " --f1r2-min-bq:Integer " + bqThres + \
                                     " -bamout " + self.bamout + \
                                     " -O " + self.output
 
         filter_mutect_calls = "gatk --java-options '-Xmx10g -Djava.io.tmpdir=" + self.scratch + "'" + \
                                 " FilterMutectCalls " + \
+                                " -I " + self.bamout + \
                                 " -R " +  self.reference_sequence + \
+                                " --max-alt-allele-count 2 " + \
+                                " --min-median-base-quality " + bqThres + \
+                                " --min-median-mapping-quality " + mqThres + \
                                 " -V " + self.output + \
                                 " -O "  + self.output_filtered
 
