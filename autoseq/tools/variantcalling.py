@@ -309,7 +309,7 @@ class Varscan2Somatic(Job):
 
 class VarDictForPureCN(Job):
     def __init__(self, input_tumor=None, input_normal=None, tumorid=None, normalid=None, reference_sequence=None,
-                 reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None, dbsnp=None):
+                 reference_dict=None, target_bed=None, output=None, min_alt_frac=0.1, min_num_reads=None, dbsnp=None, threads = 1):
         Job.__init__(self)
         self.input_tumor = input_tumor
         self.input_normal = input_normal
@@ -322,10 +322,14 @@ class VarDictForPureCN(Job):
         self.min_alt_frac = min_alt_frac
         self.min_num_reads = min_num_reads
         self.dbsnp = dbsnp
+        self.threads = threads
 
     def command(self):
         required("", self.input_tumor)
         required("", self.input_normal)
+
+        mqThres="20"
+        bqThres="30"
 
         tmp_vcf = "{scratch}/{uuid}.vcf.gz".format(scratch=self.scratch, uuid=uuid.uuid4())
 
@@ -337,10 +341,14 @@ class VarDictForPureCN(Job):
                       " -b \"{}|{}\" ".format(self.input_tumor, self.input_normal) + \
                       optional("-mfreq ", self.min_alt_frac) + \
                       optional("-nmfreq ", self.min_alt_frac) + \
-                      " -c 1 -S 2 -E 3 -g 4 -Q 10 " + required("", self.target_bed) + \
+                      optional("-th ", self.threads) + \
+                      " -c 1 -S 2 -E 3 -g 4 -Q 10 -B 100 -w 170 -O {} -q {} ".format(mqThres, bqThres) + \
+                      required("", self.target_bed) + \
                       " | testsomatic.R " + \
                       " | var2vcf_paired.pl -P 0.05 -m 4.25 " + required("-f ", self.min_alt_frac) + \
                       " -N \"{}|{}\" ".format(self.tumorid, self.normalid) + \
+                      " -q {} -Q {} -d 50 ".format(bqThres, mqThres) + \
+                      optional("-v ", self.min_num_reads) + \
                       " | " + fix_ambiguous_cl() + " | " + remove_dup_cl() + \
                       " | sed 's/Somatic;/Somatic;SOMATIC;/g' " + \
                       " | sed '/^#CHROM/i ##INFO=<ID=SOMATIC,Number=0,Type=Flag,Description=\"Somatic event\">' " + \
