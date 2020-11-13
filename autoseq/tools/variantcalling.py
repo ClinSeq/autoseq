@@ -221,8 +221,6 @@ class Varscan2Somatic(Job):
         self.normal_pileup = normal_pileup
         self.tumor_pileup = tumor_pileup
         self.outdir = outdir
-        self.output_indel = output_indel
-        self.output_snv = output_snv
         self.output_somatic_snv = output_somatic_snv
         self.output_somatic_indel = output_somatic_indel
         self.scratch = scratch
