@@ -238,10 +238,10 @@ class Varscan2Somatic(Job):
         mqThres="20"
         bqThres="30"
         
-        normal_mpileup_cmd = "samtools mpileup --no-BAQ --max-depth 50000 --min-MQ " + mqThres + " --min-BQ " + bqThres " -C50 -f " + \
+        normal_mpileup_cmd = "samtools mpileup --no-BAQ --max-depth 50000 --min-MQ " + mqThres + " --min-BQ " + bqThres + " -C50 -f " + \
                              self.reference_sequence + " -l " + self.target_bed + " " + self.input_normal + " > " + \
                              self.normal_pileup
-        tumor_mpileup_cmd = "samtools mpileup --no-BAQ --max-depth 50000 --min-MQ " + mqThres + " --min-BQ " + bqThres " -C50 -f " + \
+        tumor_mpileup_cmd = "samtools mpileup --no-BAQ --max-depth 50000 --min-MQ " + mqThres + " --min-BQ " + bqThres + " -C50 -f " + \
                             self.reference_sequence + " -l " + self.target_bed + " "  + self.input_tumor + " > " + \
                             self.tumor_pileup
         
