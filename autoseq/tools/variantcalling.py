@@ -189,7 +189,7 @@ class Mutect2Somatic(Job):
                                     " --base-quality-score-threshold " + bqThres + \
                                     " --callable-depth 50 " + \
                                     " --min-base-quality-score " + bqThres + " --minimum-mapping-quality " + mqThres + \
-                                    " --f1r2-median-mq " + mqThres + " --f1r2-min-bq:Integer " + bqThres + \
+                                    " --f1r2-median-mq " + mqThres + " --f1r2-min-bq " + bqThres + \
                                     " -bamout " + self.bamout + \
                                     " -O " + self.output
 
@@ -277,7 +277,7 @@ class Varscan2Somatic(Job):
                         " -w 1 " + self.input_tumor + " > " + self.outdir + "/varscan.indel.Somatic.hc.readcount && " + \
                         "bam-readcount -q " + mqThres + " -b " + bqThres + " -l " + \
                         self.outdir + "/varscan.snp.Somatic.hc.var -f " + self.reference_sequence + \
-                        " -w 1 " + self.input_tumor + " > " + self.outdir + "/varscan.snp.Somatic.hc.readcount && "
+                        " -w 1 " + self.input_tumor + " > " + self.outdir + "/varscan.snp.Somatic.hc.readcount "
         
         # fpfilter
         fpfilter_indel = "varscan -Xmx10g -Djava.io.tmpdir=" + self.scratch + " fpfilter " + \
