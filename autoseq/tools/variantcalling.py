@@ -269,7 +269,7 @@ class Varscan2Somatic(Job):
                         self.outdir + "/varscan.snp.Somatic.hc.var"
         
         # link bam index file to format that bam-readcount accepts
-        bai_file_link = "ln -svf " + self.input_tumor.replace(".bam", ".bai") + self.input_tumor + ".bai"
+        bai_file_link = "ln -svf " + self.input_tumor.replace(".bam", ".bai") + " " + self.input_tumor + ".bai"
         
         # bam-readcount
         bam_readcount = "bam-readcount -q " + mqThres + " -b " + bqThres + " -l " + \
@@ -658,7 +658,7 @@ def call_somatic_variants(pipeline, cancer_bam, normal_bam, cancer_capture, norm
                             reference_sequence=pipeline.refdata['reference_genome'],
                             normal_pileup="{}/variants/varscan/{}.pileup".format(outdir, normal_capture_str),
                             tumor_pileup="{}/variants/varscan/{}.pileup".format(outdir, cancer_capture_str),
-                            outdir = outdir,
+                            outdir="{}/variants/varscan".format(outdir),
                             target_bed=pipeline.refdata['targets'][capture_name]['targets-bed-slopped20-gz'],
                             output_somatic_snv="{}/variants/varscan/{}-{}-varscan.snp.Somatic.hc.filtered.vcf".format(outdir, normal_capture_str, cancer_capture_str),
                             output_somatic_indel="{}/variants/varscan/{}-{}-varscan.indel.Somatic.hc.filtered.vcf".format(outdir, normal_capture_str, cancer_capture_str),
