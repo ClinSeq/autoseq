@@ -25,12 +25,13 @@ __author__ = 'dankle'
 @click.option('--runner_name', default='shellrunner', help='Runner to use.')
 @click.option('--loglevel', default='INFO', help='level of logging')
 @click.option('--jobdb', default=None, help="sqlite3 database to write job info and stats")
+@click.option('--script-dir', default='/nfs/PROBIO', help='/path/to/autoseq-scripts/', type=str)
 @click.option('--dot_file', default=None, help="write graph to dot file with this name")
 @click.option('--cores', default=1, help="max number of cores to allow jobs to use")
 @click.option('--umi', is_flag=True, help="To process the data with UMI- Unique Molecular Identifier")
 @click.option('--scratch', default="/tmp", help="scratch dir to use")
 @click.pass_context
-def cli(ctx, ref, job_params, outdir, libdir, runner_name, loglevel, jobdb, dot_file, cores, umi, scratch):
+def cli(ctx, ref, job_params, outdir, libdir, runner_name, loglevel, jobdb, script_dir, dot_file, cores, umi, scratch):
     setup_logging(loglevel)
     logging.debug("Reading reference data from {}".format(ref))
     ctx.obj = {}
@@ -41,6 +42,7 @@ def cli(ctx, ref, job_params, outdir, libdir, runner_name, loglevel, jobdb, dot_
     ctx.obj['pipeline'] = None
     ctx.obj['runner'] = get_runner(runner_name, cores)
     ctx.obj['jobdb'] = jobdb
+    ctx.obj['script_dir'] = script_dir
     ctx.obj['dot_file'] = dot_file
     ctx.obj['cores'] = cores
     ctx.obj['umi'] = umi

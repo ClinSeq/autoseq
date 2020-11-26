@@ -280,7 +280,8 @@ class Gridss(Job):
         self.input_normal = None
         self.input_tumor = None
         self.output_full = None
-        self.output_filter = None
+        #self.output_filter = None
+        self.script_dir = None
         self.pondir = None
         self.reference_sequence = None
         self.workingdir = None
@@ -303,14 +304,16 @@ class Gridss(Job):
                                                     input_normal=self.input_normal,
                                                     input_tumor=self.input_tumor)
         
-        conda_activate = " conda activate gridss_R "
+        conda_activate = " source activate gridss_R "
 
-        somatic_filter = ("Rscript /nfs/PROBIO/autoseq-scripts/gridss_somatic_filter.R " + \
-                          " --input {input_vcf} -s /nfs/PROBIO/autoseq-scripts/ -p {pondir} " + \
-                          " --tumourordinal 2 --ref BSgenome.Hsapiens.1000genomes.hs37d5 " + \
-                          " --output {output_filvcf} ").format(input_vcf=self.output_full,
-                                                               pondir=self.pondir,
-                                                               output_filvcf=self.output_filter)
-        
-        conda_deactivate = " conda deactivate "
-        return " && ".join([variant_calling, conda_activate, somatic_filter, conda_deactivate])
+       # somatic_filter = ("Rscript {script_dir}/autoseq-scripts/gridss_somatic_filter.R " + \
+       #                   " --input {input_vcf} -s {script_dir}/autoseq-scripts/ -p {script_dir}/{pondir} " + \
+       #                   " --tumourordinal 2 --ref BSgenome.Hsapiens.1000genomes.hs37d5 " + \
+       #                   " --output {output_filvcf} ").format(input_vcf=self.output_full,
+       #                                                        script_dir=self.script_dir,
+       #                                                        pondir=self.pondir,
+       #                                                        output_filvcf=self.output_filter)
+       # 
+        conda_deactivate = " soource deactivate "
+        #return " && ".join([variant_calling, conda_activate, somatic_filter, conda_deactivate])
+        return " && ".join([variant_calling])

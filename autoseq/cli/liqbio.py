@@ -32,6 +32,7 @@ def liqbio(ctx, sample):
                                          maxcores=ctx.obj['cores'],
                                          runner=ctx.obj['runner'],
                                          jobdb=ctx.obj['jobdb'],
+                                         script_dir=ctx.obj['script_dir'],
                                          dot_file=ctx.obj['dot_file'],
                                          umi=ctx.obj['umi'],
                                          scratch=ctx.obj['scratch'])
@@ -47,7 +48,7 @@ def liqbio(ctx, sample):
     # # return_code from run_pipeline() will be != 0 if the pipeline fails
     ##Run post process scrpits######### 
     print("Generate IGV Nav")
-    create_symlinks = GenerateSymlink(ctx.obj['outdir'])
+    create_symlinks = GenerateSymlink(ctx.obj['outdir'], ctx.obj['script_dir'])
     create_symlinks.generateIGVsymlink()
     create_symlinks.create_igv_session_file()
     ###################################

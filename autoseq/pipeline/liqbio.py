@@ -12,10 +12,10 @@ __author__ = 'thowhi'
 
 
 class LiqBioPipeline(ClinseqPipeline):
-    def __init__(self, sampledata, refdata, job_params, outdir, libdir, umi, maxcores=1, scratch="/scratch/tmp/tmp",
+    def __init__(self, sampledata, refdata, job_params, script_dir, outdir, libdir, umi, maxcores=1, scratch="/scratch/tmp/tmp",
                  **kwargs):
         ClinseqPipeline.__init__(self, sampledata, refdata, job_params, outdir, libdir, umi,
-                                 maxcores, scratch, **kwargs)
+                                 script_dir, maxcores, scratch, **kwargs)
 
         # Set the min alt frac value:
         self.default_job_params["vardict-min-alt-frac"] = 0.01
@@ -114,7 +114,7 @@ class LiqBioPipeline(ClinseqPipeline):
         # Configure liqbio analyses to be run on all unique panel captures individually:
         for unique_capture in self.get_mapped_captures_no_wgs():
             self.configure_single_capture_analysis_liqbio(unique_capture)
-            self.configure_svict(unique_capture)
+            #self.configure_svict(unique_capture)
             #self.configure_gridss(unique_capture)
 
         # Configure a liqbio analyses for each normal-cancer pairing:
@@ -136,18 +136,19 @@ class LiqBioPipeline(ClinseqPipeline):
         gridss.input_tumor = input_cancer
         gridss.reference_sequence = self.refdata['bwaIndex']
         gridss.pondir = self.refdata["pondir"]
+        gridss.script_dir = self.script_dir
         gridss.assembly = "{}/svs/gridss/{}-{}-assembly.bam".format(self.outdir, normal_str, cancer_str)
         gridss.steps = " ALL "
         gridss.workingdir = "{}/svs/gridss/".format(self.outdir)
         gridss.output_full = "{}/svs/gridss/{}-{}-gridss.vcf.gz".format(self.outdir, normal_str, cancer_str)
-        gridss.output_filter = "{}/svs/gridss/{}-{}-gridss_filtered.vcf.bgz".format(self.outdir, normal_str, cancer_str)
+        #gridss.output_filter = "{}/svs/gridss/{}-{}-gridss_filtered.vcf.bgz".format(self.outdir, normal_str, cancer_str)
         gridss.threads = self.maxcores
         gridss.jobname = "gridss-sv-calling-{}-{}".format(normal_str, cancer_str)
 
         self.add(gridss)
 
         gridss_igvinput = GenerateIGVNavInputSV()
-        gridss_igvinput.input_vcf = gridss.output_filter
+        gridss_igvinput.input_vcf = gridss.output_full
         gridss_igvinput.sdid = cancer_capture.sdid
         gridss_igvinput.vcftype = 'somatic'
         gridss_igvinput.tool = 'gridss'
@@ -403,6 +404,7 @@ class LiqBioPipeline(ClinseqPipeline):
         realignment = Realignment()
         realignment.input_bam = align_unmap_bam.output_bam
         realignment.scratch = self.scratch
+        realignment.script_dir = self.script_dir
         realignment.output_bam = "{}/bams/{}/{}.realigned-{}.bam".format(self.outdir, capture_kit, clinseq_barcode, jobname)
         realignment.reference_genome = self.refdata['reference_genome']
         realignment.target_region = self.refdata['targets'][targets]['targets-bed-slopped20']

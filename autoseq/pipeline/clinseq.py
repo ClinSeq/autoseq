@@ -72,7 +72,7 @@ class ClinseqPipeline(PypedreamPipeline):
     """
     A pipeline for processing clinseq cancer genomics.
     """
-    def __init__(self, sampledata, refdata, job_params, outdir, libdir, umi, maxcores=1, 
+    def __init__(self, sampledata, refdata, job_params, outdir, libdir, umi, script_dir, maxcores=1, 
                  scratch="/scratch/tmp/tmp", analysis_id=None, **kwargs):
         """
         :param sampledata: A dictionary specifying the clinseq barcodes of samples of different types.
@@ -96,6 +96,7 @@ class ClinseqPipeline(PypedreamPipeline):
         self.scratch = scratch
         self.analysis_id = analysis_id
         self.umi = umi
+        self.script_dir = script_dir
 
         # Set up default job parameters:
         self.default_job_params = {
@@ -557,6 +558,7 @@ class ClinseqPipeline(PypedreamPipeline):
         merge_germline_vcfs.input_vcf_hc = haplotypecaller.output
         merge_germline_vcfs.input_vcf_strelka = strelka_germline.output_filtered_vcf
         merge_germline_vcfs.reference_genome = self.refdata['reference_genome']
+        merge_germline_vcfs.script_dir = self.script_dir
         merge_germline_vcfs.output_vcf = "{}/variants/{}-all.germline.vcf.gz".format(self.outdir, capture_str)
         merge_germline_vcfs.jobname = "germline-vcf-merging/{}".format(capture_str)
 
@@ -827,6 +829,7 @@ class ClinseqPipeline(PypedreamPipeline):
         somatic_seq.scratch = self.scratch
         somatic_seq.input_normal = normal_bam
         somatic_seq.input_tumor = cancer_bam
+        somatic_seq.script_dir = self.script_dir
         somatic_seq.reference_sequence = self.refdata['reference_genome']
         somatic_seq.input_mutect_vcf = somatic_variants['mutect2']
         somatic_seq.input_varscan_snv = somatic_variants['varscan_snv']
@@ -1050,6 +1053,7 @@ class ClinseqPipeline(PypedreamPipeline):
         contest.input_eval_bam = self.get_capture_bam(library_capture_1, umi=False)
         contest.input_genotype_bam = self.get_capture_bam(library_capture_2, umi=False)
         contest.input_population_af_vcf = contest_vcf
+        contest.script_dir = self.script_dir
         contest.scratch = self.scratch
         # TODO: Is it necessary to create the output subdir contamination somewhere? Check how it's done for e.g. cnvkit.
         contest.output = "{}/contamination/{}.contest.txt".format(self.outdir, compose_lib_capture_str(library_capture_1)) # TODO: Should the analysis id also be in name of out file?

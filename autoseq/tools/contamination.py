@@ -34,14 +34,15 @@ class ContEst(Job):
         self.input_eval_bam = None
         self.input_genotype_bam = None
         self.input_population_af_vcf = None
+        self.script_dir = None
         self.output = None
         self.jobname = "contest"
 
     def command(self):
         min_genotype_ratio = "0.95"
 
-        return "java -Xmx15g " + required("-Djava.io.tmpdir=", self.scratch) +\
-            " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar -T ContEst " + \
+        return "java -Xmx8g " + required("-Djava.io.tmpdir=", self.scratch) +\
+            " -jar {}/autoseq-scripts/GenomeAnalysisTK-3.5.jar -T ContEst ".format(self.script_dir) + \
             required("-R ", self.reference_genome) + \
             required("-I:eval ", self.input_eval_bam) + \
             required("-I:genotype ", self.input_genotype_bam) + \

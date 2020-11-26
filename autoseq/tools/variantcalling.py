@@ -285,6 +285,7 @@ class SomaticSeq(Job):
     Job.__init__(self)
     self.input_normal = None
     self.input_tumor = None
+    self.script_dir = None
     self.reference_sequence = None
     self.input_mutect_vcf = None
     self.input_varscan_snv = None
@@ -318,7 +319,7 @@ class SomaticSeq(Job):
     deactivate_ssenv = "source deactivate"
 
     merge_vcf = "java " + "-Djava.io.tmpdir=" + self.scratch + \
-                " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                " -jar {}/autoseq-scripts/GenomeAnalysisTK-3.5.jar ".format(self.script_dir) + \
                 " -T CombineVariants " + \
                 " -R " + self.reference_sequence + \
                 " --variant " + self.out_snv + \
@@ -415,11 +416,12 @@ class MergeVCF(Job):
     self.input_vcf_strelka = None
     self.output_vcf = None
     self.reference_genome = None
+    self.script_dir = None
 
   def command(self):
 
     merge_vcf = "java " + "-Djava.io.tmpdir=" + self.scratch +\
-                " -jar /nfs/PROBIO/autoseq-scripts/GenomeAnalysisTK-3.5.jar " + \
+                " -jar {}/autoseq-scripts/GenomeAnalysisTK-3.5.jar ".format(self.script_dir) + \
                 " -T CombineVariants " + \
                 " -R " + self.reference_genome + \
                 " --variant:haplotypecaller " + self.input_vcf_hc + \

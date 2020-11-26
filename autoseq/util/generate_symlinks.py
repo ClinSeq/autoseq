@@ -10,11 +10,12 @@ from collections import defaultdict
 class GenerateSymlink():
     "Generates symlinks required for IGVnav inputs"
     
-    def __init__(self, outputdirname):
+    def __init__(self, outputdirname, scriptdirname):
         """ 
         :params: outputdirname -  sample output directory name 
         """
         self.outputdirname = outputdirname
+        self.script_dir = scriptdirname
 
     def generateIGVsymlink(self, *args):
         """
@@ -73,10 +74,13 @@ class GenerateSymlink():
 
         return igv_session_file_list
 
-    def create_igv_session_file(self, igv_session_master="/nfs/PROBIO/for_igv/igv_session_master.xml", igv_session_sv_master="/nfs/PROBIO/for_igv/igv_session_sv_master.xml"):
+    def create_igv_session_file(self):
         """
         Create IGV seesion file in xml format for given sample
         """
+        igv_session_master=os.path.join(self.script_dir, "for_igv/igv_session_master.xml")
+        igv_session_sv_master=os.path.join(self.script_dir, "for_igv/igv_session_sv_master.xml")
+
         resource_path = """
         <Resource path="{path_name}"/>
         """
@@ -107,8 +111,8 @@ class GenerateSymlink():
             logging.info(" Generating IGV Session File ")
             igvnav_dir = os.path.join(self.outputdirname, 'IGVnav')
             if not os.path.exists(igvnav_dir): raise Exception('IGVnav folder not found..')
-            if not os.path.exists(igv_session_master): raise Exception('IGV session master file not found : /nfs/PROBIO/for_igv/igv_session_master.xml ' )
-            if not os.path.exists(igv_session_master): raise Exception('IGV session master file not found : /nfs/PROBIO/for_igv/igv_session_sv_master.xml ' )
+            if not os.path.exists(igv_session_master): raise Exception('IGV session master file not found : for_igv/igv_session_master.xml ' )
+            if not os.path.exists(igv_session_master): raise Exception('IGV session master file not found : for_igv/igv_session_sv_master.xml ' )
             igv_session_master_str=open(igv_session_master, 'r').read()
             igv_session_sv_master_str=open(igv_session_sv_master, 'r').read()
             igv_session_files = self.get_all_files(igvnav_dir)
